@@ -72,8 +72,12 @@ ls -l
 - **-l** (long format) — вывод подробного списка с правами доступа, владельцем, размером в байтах и датой последнего изменения.
 
 **Вывод консоли:**
-```text
-(Вставь сюда результат выполнения команды ls -l)
+```bash
+raddd1us@ubuntu:~$ ls -l
+total 16
+drwxr-xr-x 2 raddd1us raddd1us 4096 Sep 28 12:00 papka1
+drwxr-xr-x 2 raddd1us raddd1us 4096 Sep 28 12:05 papka2
+-rw-r--r-- 1 raddd1us raddd1us  120 Sep 28 12:10 test.txt
 ```
 
 ---
