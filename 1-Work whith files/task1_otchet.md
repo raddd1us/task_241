@@ -161,7 +161,7 @@ diff lab1_dir/level2/source.txt lab1_dir/final_doc.txt
 raddd1us@ubuntu:~$ diff lab1_dir/level2/source.txt lab1_dir/final_doc.txt
 raddd1us@ubuntu:~$
 ```
-
+**Вывод пустой, так как содержимое файлов полностью идентично**
 ---
 
 ## 10. Отсортировать содержимое файла по возрастанию и убыванию
@@ -198,6 +198,8 @@ raddd1us@ubuntu:~$ find ~/lab1_dir -name "final_doc.txt"
 **Итоговая структура созданных каталогов**
 ```bash
 tree lab1_dir
+```
+
 **Вывод консоли:**
 ```bash raddd1us@ubuntu:~$ tree lab1_dir
 lab1_dir
@@ -215,3 +217,34 @@ lab1_dir
 ## 12. Удалить созданные в ходе задания файлы и каталоги
 ```bash
 rm -rf ~/lab1_dir
+ls -l ~/lab1_dir
+```
+
+**Разбор параметров:**
+
+- **rm** (remove) — утилита для удаления файлов и каталогов.
+
+- **-r** (recursive) — рекурсивное удаление (удаляет папку вместе со всем её содержимым).
+
+- **-i** (interactive) — интерактивный режим, который запрашивает подтверждение перед удалением каждого файла и директории.
+
+**Вывод консоли**:
+```bash raddd1us@ubuntu:~$ rm -ri ~/lab1_dir
+rm: descend into directory '/home/raddd1us/lab1_dir'? y
+rm: remove regular file '/home/raddd1us/lab1_dir/final_doc.txt'? y
+rm: descend into directory '/home/raddd1us/lab1_dir/level2'? y
+rm: descend into directory '/home/raddd1us/lab1_dir/level2/level3'? y
+rm: remove regular file '/home/raddd1us/lab1_dir/level2/level3/source.txt'? y
+rm: remove directory '/home/raddd1us/lab1_dir/level2/level3'? y
+rm: remove directory '/home/raddd1us/lab1_dir/level2'? y
+rm: remove directory '/home/raddd1us/lab1_dir'? y
+raddd1us@ubuntu:~$ ls -l ~/lab1_dir
+ls: cannot access '/home/raddd1us/lab1_dir': No such file or directory
+```
+
+---
+
+## Разница между абсолютным и относительным путём
+- **Абсолютный путь всегда начинается от корневого каталога (обозначается слешем /) и указывает полный маршрут к файлу или папке, который будет работать совершенно одинаково независимо от того, в какой директории сейчас находится пользователь. Пример: /home/raddd1us/lab1_dir/final_doc.txt.**
+
+- **Относительный путь строится относительно текущей рабочей директории пользователя. Он никогда не начинается со слеша. Пример: если мы уже находимся в папке /home/raddd1us, то относительный путь к тому же файлу будет выглядеть просто как lab1_dir/final_doc.txt.**
