@@ -192,8 +192,9 @@ find ~/lab1_dir -name "final_doc.txt"
 - **-name "final_doc.txt"** — поиск файла по точному названию.
 
 **Вывод консоли:**
-raddd1us@ubuntu:~$ find ~/lab1_dir -name "final_doc.txt"
+```bash raddd1us@ubuntu:~$ find ~/lab1_dir -name "final_doc.txt"
 /home/raddd1us/lab1_dir/final_doc.txt
+```
 
 **Итоговая структура созданных каталогов**
 ```bash
