@@ -69,3 +69,58 @@ raddd1us@ubuntu:~$ cat output.txt
 
 **Главное отличие stdout от stderr: stdout предназначен для полезных данных команды, тогда как stderr используется исключительно для служебных сообщений и ошибок. Разделение потоков позволяет фильтровать или сохранять логи ошибок отдельно от основных результатов выполнения программы.**
 
+**Пример перенаправления только stdout в файл:**
+```bash
+ls -l output.txt 1> stdout_only.txt
+cat stdout_only.txt
+```
+
+**Вывод консоли:**
+```bash
+raddd1us@ubuntu:~$ ls -l output.txt 1> stdout_only.txt
+raddd1us@ubuntu:~$ cat stdout_only.txt
+-rw-r--r-- 1 raddd1us raddd1us 28 Oct  5 15:30 output.txt
+```
+
+**Пример перенаправления только stderr в файл**
+```bash
+ls nonexistent_file.txt 2> stderr_only.txt
+cat stderr_only.txt
+```
+
+**Вывод консоли:**
+```bash
+raddd1us@ubuntu:~$ ls nonexistent_file.txt 2> stderr_only.txt
+raddd1us@ubuntu:~$ cat stderr_only.txt
+ls: cannot access 'nonexistent_file.txt': No such file or directory
+```
+
+**Пример объединения stdout и stderr в один файл**
+*Для слияния потоков вывода и ошибок в один файл применяется оператор &>*
+```bash
+raddd1us@ubuntu:~$ ls nonexistent_file.txt 2> stderr_only.txt
+raddd1us@ubuntu:~$ cat stderr_only.txt
+ls: cannot access 'nonexistent_file.txt': No such file or directory
+```
+
+**Вывод консоли:**
+```bash
+raddd1us@ubuntu:~$ ls -l output.txt nonexistent_file.txt &> combined.txt
+raddd1us@ubuntu:~$ cat combined.txt
+ls: cannot access 'nonexistent_file.txt': No such file or directory
+-rw-r--r-- 1 raddd1us raddd1us 28 Oct  5 15:30 output.txt
+```
+
+**Пример раздельного перенаправления stdout и stderr в разные файлы**
+```bash
+ls -l output.txt nonexistent_file.txt 1> success.log 2> error.log
+cat success.log
+cat error.log
+```
+
+
+
+
+
+
+
