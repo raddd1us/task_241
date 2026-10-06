@@ -118,6 +118,102 @@ cat success.log
 cat error.log
 ```
 
+**3. Вывод содержимого файла без текстовых редакторов**
+*Просмотр содержимого файла выполняется с помощью утилиты cat:*
+```bash
+cat output.txt
+```
+
+**Вывод консоли:**
+```bash
+raddd1us@ubuntu:~$ cat output.txt
+Первая строка
+Вторая строка
+```
+
+**4. Создание файла с содержимым без текстового редактора**
+*Создание файла с помощью перенаправления потока вывода утилиты echo:*
+
+```bash
+echo "Hello, Linux World!" > new_file.txt
+cat new_file.txt
+```
+
+**Вывод консоли**
+```bash
+raddd1us@ubuntu:~$ echo "Hello, Linux World!" > new_file.txt
+raddd1us@ubuntu:~$ cat new_file.txt
+Hello, Linux World!
+```
+
+**5. Перенаправление потоков**
+**5.1. Перенаправить только stdout в файл**
+*При явном перенаправлении stdout используется запись 1> (или просто >):*
+```bash
+ls -l output.txt 1> stdout_only.txt
+cat stdout_only.txt
+```
+
+**Вывод консоли:**
+```bash
+raddd1us@ubuntu:~$ ls -l output.txt 1> stdout_only.txt
+raddd1us@ubuntu:~$ cat stdout_only.txt
+-rw-r--r-- 1 raddd1us raddd1us 28 Oct  5 15:30 output.txt
+```
+
+**5.2. Перенаправить только stderr в файл**
+*Для перенаправления ошибок используется запись 2>:*
+```bash
+ls nonexistent_file.txt 2> stderr_only.txt
+cat stderr_only.txt
+```
+
+**Вывод консоли:**
+```bash
+raddd1us@ubuntu:~$ ls nonexistent_file.txt 2> stderr_only.txt
+raddd1us@ubuntu:~$ cat stderr_only.txt
+ls: cannot access 'nonexistent_file.txt': No such file or directory
+```
+
+**5.3. Перенаправить stdout и stderr в один файл**
+*Для объединения потоков вывода и ошибок в один файл используется оператор &>:*
+```bash
+ls -l output.txt nonexistent_file.txt &> combined.txt
+cat combined.txt
+```
+
+**Вывод консоли:**
+```bash
+raddd1us@ubuntu:~$ ls -l output.txt nonexistent_file.txt &> combined.txt
+raddd1us@ubuntu:~$ cat combined.txt
+ls: cannot access 'nonexistent_file.txt': No such file or directory
+-rw-r--r-- 1 raddd1us raddd1us 28 Oct  5 15:30 output.txt
+```
+
+**5.4. Перенаправить stdout и stderr в разные файлы**
+*Одновременное перенаправление потоков вывода и ошибок в два разных файла:*
+```bash
+ls -l output.txt nonexistent_file.txt 1> success.log 2> error.log
+cat success.log
+cat error.log
+```
+
+**Вывод консоли:**
+```bash
+raddd1us@ubuntu:~$ ls -l output.txt nonexistent_file.txt 1> success.log 2> error.log
+raddd1us@ubuntu:~$ cat success.log
+-rw-r--r-- 1 raddd1us raddd1us 28 Oct  5 15:30 output.txt
+raddd1us@ubuntu:~$ cat error.log
+ls: cannot access 'nonexistent_file.txt': No such file or directory
+```
+
+**6. Передача данных через стандартный ввод (stdin)**
+Передача данных из файла в команду cat через оператор перенаправления ввода <:
+
+
+
+
+
 
 
 
