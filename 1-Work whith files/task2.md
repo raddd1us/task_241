@@ -208,7 +208,40 @@ ls: cannot access 'nonexistent_file.txt': No such file or directory
 ```
 
 **6. Передача данных через стандартный ввод (stdin)**
-Передача данных из файла в команду cat через оператор перенаправления ввода <:
+*Передача данных из файла в команду cat через оператор перенаправления ввода <:*
+```bash
+cat < output.txt
+```
+
+**Вывод консоли:**
+```bash
+raddd1us@ubuntu:~$ cat < output.txt
+Первая строка
+Вторая строка
+```
+
+**7. Использование /dev/null (глушение ненужного вывода)**
+*Специальное виртуальное устройство /dev/null уничтожает любые перенаправленные в него данные.*
+
+*Отправка потока ошибок stderr в /dev/null:*
+```bash
+ls nonexistent_file.txt 2> /dev/null
+```
+
+*Полное глушение и stdout, и stderr:*
+```bash
+ls -l output.txt nonexistent_file.txt &> /dev/null
+```
+
+
+
+
+
+
+
+
+
+
 
 
 
