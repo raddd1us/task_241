@@ -40,4 +40,41 @@
 - состояние прав файла до и после возврата от `777` к минимально необходимым;
 - команда изменения владельца и группы файла;
 - подтверждение удаления `user2`;
+
+### Отчет по практической работе: Управление пользователями
+
+### 1. Добавление пользователей user1 и user2 и установка паролей
+
+Создаем пользователя `user1` с оболочкой `bash` и пользователя `user2` с оболочкой `sh`, а также задаем им пароли.
+
+**Команды:**
+```bash
+sudo useradd -m -s /bin/bash user1
+sudo useradd -m -s /bin/sh user2
+sudo passwd user1
+sudo passwd user2
+```
+
+**Вывод консоли:**
+
+```bash
+raddd1us@ubuntu:~$ sudo useradd -m -s /bin/bash user1
+raddd1us@ubuntu:~$ sudo useradd -m -s /bin/sh user2
+raddd1us@ubuntu:~$ sudo passwd user1
+New password: 
+Retype new password: 
+passwd: password updated successfully
+raddd1us@ubuntu:~$ sudo passwd user2
+New password: 
+Retype new password: 
+passwd: password updated successfully
+```
+
+
+
+
+
+
+
+- 
 - краткое пояснение назначения `r`, `w`, `x` для файла и каталога.
