@@ -31,167 +31,256 @@
 
 # Отчет по практической работе: Перенаправление ввода-вывода и конвейеры
 
-## 1. Операторы перенаправления `>` и `>>`
-- **`>` (перезапись)** — перенаправляет поток вывода в файл. Если файл существовал, его содержимое полностью перезаписывается. Если файла не было, он создаётся.
-- **`>>` (добавление)** — перенаправляет поток вывода в конец файла. Существующие данные сохраняются, новые строки дописываются в конец.
 
-**Пример использования `>`:**
+## 1. Операторы `>` и `>>`
+
+- `>` перенаправляет вывод команды в файл. Если файл существует, он перезаписывается, если нет, создаётся.
+- `>>` дописывает вывод в конец файла, сохраняя прежнее содержимое.
+
+Использованные команды:
+
 ```bash
+mkdir -p ~/redirect_lab && cd ~/redirect_lab
+pwd
 echo "Первая строка" > output.txt
 cat output.txt
-```
-
-**Вывод консоли:**
-```bash
-raddd1us@ubuntu:~$ echo "Первая строка" > output.txt
-raddd1us@ubuntu:~$ cat output.txt
-Первая строка
-```
-
-**Пример использования `>>`:**
-```bash
 echo "Вторая строка" >> output.txt
 cat output.txt
 ```
 
-**Вывод консоли:**
-```bash
-raddd1us@ubuntu:~$ echo "Вторая строка" >> output.txt
-raddd1us@ubuntu:~$ cat output.txt
+Полученный результат:
+
+```text
+[student@student-13 ~]$ mkdir -p ~/redirect_lab && cd ~/redirect_lab
+[student@student-13 redirect_lab]$ pwd
+/home/student/redirect_lab
+[student@student-13 redirect_lab]$ echo "Первая строка" > output.txt
+[student@student-13 redirect_lab]$ cat output.txt
+Первая строка
+[student@student-13 redirect_lab]$ echo "Вторая строка" >> output.txt
+[student@student-13 redirect_lab]$ cat output.txt
 Первая строка
 Вторая строка
 ```
 
-## 2. Стандартные потоки и файловые дескрипторы
-**Что такое стандартные потоки `stdin`, `stdout`, `stderr` и файловые дескрипторы 0, 1, 2?***
-*В ОС Linux все процессы взаимодействуют с потоками ввода-вывода через специальные файловые дескрипторы:*
-* **`stdin` (Standard Input, дескриптор 0)** — стандартный поток ввода. По умолчанию данные считываются с клавиатуры.
-* **`stdout` (Standard Output, дескриптор 1)** — стандартный поток вывода. Предназначен для вывода штатных результатов работы программы (по умолчанию выводится на экран терминала).
-* **`stderr` (Standard Error, дескриптор 2)** — стандартный поток ошибок. Используется для вывода служебных сообщений, ошибок и диагностической информации (по умолчанию также выводится на экран терминала).
+`>` создал файл с одной строкой, `>>` добавил вторую строку, первая сохранилась.
 
-## 3. Вывод содержимого файла, не используя текстовые редакторы
-**Для просмотра содержимого файлов в консоли без открытия текстовых редакторов используется утилита `cat`:**
-```bash
-cat output.txt
-```
-**Вывод консоли:**
-```bash
-raddd1us@ubuntu:~$ cat output.txt
-Первая строка
-Вторая строка
-```
+## 2. Стандартные потоки `stdin`, `stdout`, `stderr`
 
-## 4. Создать файл с содержимым, не используя текстовый редактор
-**Создать файл с текстом можно с помощью команды `echo` совместно с оператором перенаправления `>`:**
+- `stdin` (дескриптор 0) — стандартный поток ввода: данные, которые программа получает на обработку (по умолчанию с клавиатуры).
+- `stdout` (дескриптор 1) — стандартный поток вывода: штатный результат работы программы (по умолчанию на экран терминала).
+- `stderr` (дескриптор 2) — стандартный поток ошибок: сообщения об ошибках и диагностика (по умолчанию тоже на экран терминала).
+
+## 3. Вывод содержимого файла без текстовых редакторов
+
+Использованная команда: `cat output.txt` (результат см. в пункте 1: команда вывела обе строки файла).
+
+## 4. Создание файла с содержимым без текстового редактора
+
+Использованные команды:
+
 ```bash
 echo "Пример создания файла без редактора" > new_file.txt
 cat new_file.txt
+cat > multi.txt <<'EOF'
+строка один
+строка два
+строка три
+EOF
+cat multi.txt
 ```
-**Вывод консоли:**
-```bash
-raddd1us@ubuntu:~$ echo "Пример создания файла без редактора" > new_file.txt
-raddd1us@ubuntu:~$ cat new_file.txt
+
+Полученный результат:
+
+```text
+[student@student-13 redirect_lab]$ echo "Пример создания файла без редактора" > new_file.txt
+[student@student-13 redirect_lab]$ cat new_file.txt
 Пример создания файла без редактора
+[student@student-13 redirect_lab]$ cat > multi.txt <<'EOF'
+> строка один
+> строка два
+> строка три
+> EOF
+[student@student-13 redirect_lab]$ cat multi.txt
+строка один
+строка два
+строка три
 ```
 
-## 5. Перенаправление потоков (`stdout`, `stderr`, объединение и разделение)
+Однострочный файл создан через `echo` и `>`, многострочный через heredoc (`<<'EOF'`).
 
-### 5.1. Перенаправление только `stdout` в файл
-Для явного перенаправления стандартного вывода используется дескриптор `1>` (или просто `>`):
+## 5. Перенаправление потоков
+
+### 5.1. Только `stdout`
+
 ```bash
 ls -l output.txt 1> stdout_only.txt
 cat stdout_only.txt
 ```
-**Вывод консоли:**
-```bash
-raddd1us@ubuntu:~$ ls -l output.txt 1> stdout_only.txt
-raddd1us@ubuntu:~$ cat stdout_only.txt
--rw-r--r-- 1 raddd1us raddd1us 28 Oct  5 15:30 output.txt
+
+```text
+[student@student-13 redirect_lab]$ ls -l output.txt 1> stdout_only.txt
+[student@student-13 redirect_lab]$ cat stdout_only.txt
+-rw-r--r-- 1 student student 52 Nov 22 20:18 output.txt
 ```
 
-## 5.2. Перенаправление только `stderr` в файл
-Для перенаправления потока ошибок используется дескриптор `2>`:
+На экран ничего не вышло, весь `stdout` попал в файл.
+
+### 5.2. Только `stderr`
+
 ```bash
 ls nonexistent_file.txt 2> stderr_only.txt
 cat stderr_only.txt
 ```
-**Вывод консоли:**
-```bash
-raddd1us@ubuntu:~$ ls nonexistent_file.txt 2> stderr_only.txt
-raddd1us@ubuntu:~$ cat stderr_only.txt
+
+```text
+[student@student-13 redirect_lab]$ ls nonexistent_file.txt 2> stderr_only.txt
+[student@student-13 redirect_lab]$ cat stderr_only.txt
 ls: cannot access 'nonexistent_file.txt': No such file or directory
 ```
 
-## 5.3. Перенаправление `stdout` и `stderr` в один файл
-Чтобы записать и успешный вывод, и ошибки в один общий файл, используется оператор `&>`:
+Сообщение об ошибке записано в файл через `2>`, на экране пусто.
+
+### 5.3. `stdout` и `stderr` в один файл
+
 ```bash
 ls -l output.txt nonexistent_file.txt &> combined.txt
 cat combined.txt
 ```
-**Вывод консоли:**
-```bash
-raddd1us@ubuntu:~$ ls -l output.txt nonexistent_file.txt &> combined.txt
-raddd1us@ubuntu:~$ cat combined.txt
+
+```text
+[student@student-13 redirect_lab]$ ls -l output.txt nonexistent_file.txt &> combined.txt
+[student@student-13 redirect_lab]$ cat combined.txt
 ls: cannot access 'nonexistent_file.txt': No such file or directory
--rw-r--r-- 1 raddd1us raddd1us 28 Oct  5 15:30 output.txt
+-rw-r--r-- 1 student student 52 Nov 22 20:18 output.txt
 ```
 
-## 5.4. Перенаправление `stdout` и `stderr` в разные файлы
-Потоки можно разделить, указав для каждого свой файл назначения:
+Оператор `&>` собрал оба потока в один файл. Ошибка стоит выше результата, потому что `ls` сначала проверяет аргументы и сообщает об ошибке, а потом печатает список.
+
+### 5.4. `stdout` и `stderr` в разные файлы
+
 ```bash
 ls -l output.txt nonexistent_file.txt 1> success.log 2> error.log
 cat success.log
 cat error.log
 ```
-**Вывод консоли:**
-```bash
-raddd1us@ubuntu:~$ ls -l output.txt nonexistent_file.txt 1> success.log 2> error.log
-raddd1us@ubuntu:~$ cat success.log
--rw-r--r-- 1 raddd1us raddd1us 28 Oct  5 15:30 output.txt
-raddd1us@ubuntu:~$ cat error.log
+
+```text
+[student@student-13 redirect_lab]$ ls -l output.txt nonexistent_file.txt 1> success.log 2> error.log
+[student@student-13 redirect_lab]$ cat success.log
+-rw-r--r-- 1 student student 52 Nov 22 20:18 output.txt
+[student@student-13 redirect_lab]$ cat error.log
 ls: cannot access 'nonexistent_file.txt': No such file or directory
 ```
 
-## 6. Чем отличаются `stdout` и `stderr`?
-**Главное отличие заключается в их назначении:**
-* `stdout` предназначен для полезных, штатных данных и результатов выполнения команды.
-* `stderr` используется исключительно для служебных сообщений, предупреждений и ошибок.
-Разделение этих потоков позволяет фильтровать информацию: например, выводить полезный результат на экран, а логи ошибок сохранять в отдельный файл для последующего анализа.
+Результат попал в `success.log`, ошибка в `error.log`.
 
-## 7. Что такое `stdin`? Пример передачи данных через стандартный ввод
-**`stdin` (Standard Input, дескриптор 0) — стандартный поток ввода, через который программа принимает данные для обработки (по умолчанию с клавиатуры).**
+## 6. Чем отличаются `stdout` и `stderr`
 
-**Пример передачи данных через стандартный ввод с помощью оператора `<`:**
+`stdout` предназначен для полезного результата команды, `stderr` для сообщений об ошибках и диагностики. Это два независимых потока: как показано в пункте 5, их можно направить в разные файлы. Благодаря этому результат можно обрабатывать дальше, а ошибки сохранять отдельно или скрывать.
+
+## 7. `stdin` и передача данных через стандартный ввод
+
+`stdin` (дескриптор 0) — поток, из которого программа читает входные данные. Оператор `<` подаёт на него содержимое файла.
+
 ```bash
 grep "строка" < output.txt
+wc -l < output.txt
 ```
-**Вывод консоли:**
-```bash
-raddd1us@ubuntu:~$ grep "строка" < output.txt
+
+```text
+[student@student-13 redirect_lab]$ grep "строка" < output.txt
 Первая строка
 Вторая строка
-```
-
-## 8. Как отправить весь ненужный вывод команды в `/dev/null`?
-`/dev/null` — это специальный системный файл, который уничтожает все данные, записанные в него. Чтобы скрыть ненужный вывод команды, его перенаправляют в `/dev/null`:
-```bash
-ls nonexistent_file.txt &> /dev/null
-```
-
-## 9. Чем отличается конвейер `|` от перенаправления `>`?
-* Конвейер (`|`) соединяет **вывод (`stdout`)** одной программы с **вводом (`stdin`)** другой программы на лету, позволяя выстраивать цепочки обработки данных.
-* Перенаправление (`>`) сохраняет поток вывода команды в **файл** на диске.
-
-## 10. Пример конвейера из двух или трёх программ через `|`
-Соберем команду из трех программ: `cat` выводит содержимое файла, `grep` фильтрует строки, а `wc -l` считает количество строк:
-```bash
-cat output.txt | grep "строка" | wc -l
-```
-**Вывод консоли:**
-```bash
-raddd1us@ubuntu:~$ cat output.txt | grep "строка" | wc -l
+[student@student-13 redirect_lab]$ wc -l < output.txt
 2
 ```
+
+`grep` и `wc` прочитали данные не из аргумента, а из `stdin`.
+
+## 8. Отправка ненужного вывода в `/dev/null`
+
+`/dev/null` — специальный файл, который отбрасывает всё, что в него записано.
+
+```bash
+ls nonexistent_file.txt &> /dev/null
+echo $?
+ls -l output.txt nonexistent_file.txt 2> /dev/null
+```
+
+```text
+[student@student-13 redirect_lab]$ ls nonexistent_file.txt &> /dev/null
+[student@student-13 redirect_lab]$ echo $?
+2
+[student@student-13 redirect_lab]$ ls -l output.txt nonexistent_file.txt 2> /dev/null
+-rw-r--r-- 1 student student 52 Nov 22 20:18 output.txt
+```
+
+`&> /dev/null` скрыл и результат, и ошибку. Код возврата `2` показывает, что команда всё равно завершилась с ошибкой. `2> /dev/null` скрыл только ошибку, результат остался на экране.
+
+## 9. Чем отличается конвейер `|` от перенаправления `>`
+
+- Конвейер `|` передаёт `stdout` одной команды на `stdin` следующей, промежуточный файл не нужен.
+- Перенаправление `>` сохраняет вывод команды в файл на диске.
+
+Пример для сравнения:
+
+```bash
+ls | sort -r
+ls > list.txt
+cat list.txt
+```
+
+```text
+[student@student-13 redirect_lab]$ ls | sort -r
+success.log
+stdout_only.txt
+stderr_only.txt
+output.txt
+new_file.txt
+multi.txt
+error.log
+combined.txt
+[student@student-13 redirect_lab]$ ls > list.txt
+[student@student-13 redirect_lab]$ cat list.txt
+combined.txt
+error.log
+list.txt
+multi.txt
+new_file.txt
+output.txt
+stderr_only.txt
+stdout_only.txt
+success.log
+```
+
+В первом случае вывод `ls` обработал `sort -r` и результат сразу попал на экран. Во втором вывод сохранён в `list.txt`. Сам `list.txt` попал в список, потому что оболочка создаёт файл до запуска `ls`.
+
+## 10. Конвейер из нескольких программ
+
+```bash
+cat output.txt multi.txt | grep "строка" | wc -l
+```
+
+```text
+[student@student-13 redirect_lab]$ cat output.txt multi.txt | grep "строка" | wc -l
+5
+```
+
+`cat` вывел содержимое двух файлов (5 строк), `grep` оставил строки со словом «строка», `wc -l` их посчитал. Результат: 5.
+
+## Удаление рабочего каталога
+
+```bash
+cd ~ && command rm -r ~/redirect_lab && ls -d ~/redirect_lab
+```
+
+```text
+[student@student-13 ~]$ cd ~ && command rm -r ~/redirect_lab && ls -d ~/redirect_lab
+ls: cannot access '/home/student/redirect_lab': No such file or directory
+```
+
+Рабочий каталог `redirect_lab` со всеми созданными файлами удалён. Команда `command rm` вызывает `rm` в обход псевдонима: на сервере `rm` запрашивает подтверждение для каждого файла.
 
 
 
