@@ -30,216 +30,430 @@
 
 10) Покажите UID, основной GID и дополнительные группы `user1`.
 
-## Критерий приёмки
 
-В отчёте должны быть:
-- команды создания `user1`, `user2` и группы `labusers`;
-- вывод, подтверждающий оболочки пользователей;
-- вывод `id` или аналогичный для подтверждения UID, GID и групп;
-- команда и результат настройки прав на созданный файл;
-- состояние прав файла до и после возврата от `777` к минимально необходимым;
-- команда изменения владельца и группы файла;
-- подтверждение удаления `user2`;
-- краткое пояснение назначения `r`, `w`, `x` для файла и каталога.
+# Отчёт по практической работе: Управление пользователями
 
-# Отчет по практической работе: Управление пользователями
+## 1. Добавление пользователей `user1` и `user2`
 
-## 1. Добавление пользователей user1 и user2 и установка паролей
+Перед созданием проверено, что пользователи и группа ещё не существуют, а также определены доступные оболочки и группа администраторов.
 
-Создаем пользователя `user1` с оболочкой `bash` и пользователя `user2` с оболочкой `sh`, а также задаем им пароли.
+Использованные команды:
 
-**Команды:**
+```bash
+whoami
+grep -E '^(NAME|VERSION)=' /etc/os-release
+getent passwd user1 user2
+getent group labusers sudo wheel
+cat /etc/shells
+```
+
+Полученный результат:
+
+```bash
+[student@student-13 ~]$ whoami
+student
+[student@student-13 ~]$ grep -E '^(NAME|VERSION)=' /etc/os-release
+NAME="ALT Linux"
+VERSION="20250612"
+[student@student-13 ~]$ getent passwd user1 user2
+[student@student-13 ~]$ getent group labusers sudo wheel
+wheel:x:10:root,student
+[student@student-13 ~]$ cat /etc/shells
+/bin/sh
+/usr/bin/sh
+/bin/bash
+/usr/bin/bash
+/bin/ash
+/usr/bin/ash
+/bin/bsh
+/usr/bin/bsh
+/bin/csh
+/usr/bin/csh
+/bin/tcsh
+/usr/bin/tcsh
+/bin/ksh
+/usr/bin/ksh
+/bin/zsh
+/usr/bin/zsh
+/bin/xonsh
+/usr/bin/xonsh
+```
+
+Пользователей `user1`, `user2` и группы `labusers` в системе нет. В ALT Linux группа администраторов называется `wheel`.
+
+### 1.1–1.2. Создание пользователей и проверка оболочек
+
+Использованные команды:
 
 ```bash
 sudo useradd -m -s /bin/bash user1
 sudo useradd -m -s /bin/sh user2
+grep -E '^(user1|user2):' /etc/passwd
+```
+
+Полученный результат:
+
+```bash
+[student@student-13 ~]$ sudo useradd -m -s /bin/bash user1
+[student@student-13 ~]$ sudo useradd -m -s /bin/sh user2
+[student@student-13 ~]$ grep -E '^(user1|user2):' /etc/passwd
+user1:x:1001:1002::/home/user1:/bin/bash
+user2:x:1002:1003::/home/user2:/bin/sh
+```
+
+Ключ `-m` создаёт домашний каталог, `-s` задаёт оболочку. У `user1` оболочка `/bin/bash`, у `user2` — `/bin/sh`.
+
+### 1.3. Установка паролей
+
+Использованные команды:
+
+```bash
 sudo passwd user1
 sudo passwd user2
 ```
 
-**Вывод консоли:**
+Полученный результат (сообщения о требованиях к паролю сокращены, предложенный системой пароль скрыт):
 
 ```bash
-raddd1us@ubuntu:~$ sudo useradd -m -s /bin/bash user1
-raddd1us@ubuntu:~$ sudo useradd -m -s /bin/sh user2
-raddd1us@ubuntu:~$ sudo passwd user1
-New password: 
-Retype new password: 
-passwd: password updated successfully
-raddd1us@ubuntu:~$ sudo passwd user2
-New password: 
-Retype new password: 
-passwd: password updated successfully
+[student@student-13 ~]$ sudo passwd user1
+passwd: updating all authentication tokens for user user1.
+
+You can now choose the new password or passphrase.
+...
+Alternatively, if no one else can see your terminal now, you can pick this as
+your password: "<скрыто>".
+
+Enter new password:
+Re-type new password:
+passwd: all authentication tokens updated successfully.
+[student@student-13 ~]$ sudo passwd user2
+passwd: updating all authentication tokens for user user2.
+
+You can now choose the new password or passphrase.
+...
+Alternatively, if no one else can see your terminal now, you can pick this as
+your password: "<скрыто>".
+
+Enter new password:
+Re-type new password:
+passwd: all authentication tokens updated successfully.
 ```
 
-**Проверим оболочки пользователей в файле /etc/passwd:**
+Пароли обоим пользователям успешно установлены. Система проверяет сложность пароля, поэтому слишком простые пароли отклоняются.
 
-```bash
-grep -E 'user1|user2' /etc/passwd
-```
+## 2. Группа `labusers` и членство в группах
 
-**Вывод консоли:**
-
-```bash
-user1:x:1001:1001::/home/user1:/bin/bash
-user2:x:1002:1002::/home/user2:/bin/sh
-```
-
-## 2. Создание группы labusers и добавление пользователей
-
-**Создаем группу labusers, добавляем user1 в группу администраторов системы (в Ubuntu это обычно группа sudo), а также обоих пользователей в группу labusers.**
-
-**Команды:**
+Использованные команды:
 
 ```bash
 sudo groupadd labusers
-sudo usermod -aG sudo user1
+sudo usermod -aG wheel user1
 sudo usermod -aG labusers user1
 sudo usermod -aG labusers user2
+getent group wheel labusers
 ```
 
-# 3. Права доступа и их проверка в домашней директории
-**Что такое права доступа?**
-
-**Права доступа в Linux определяют, какие действия (чтение r, запись w, выполнение x) могут совершать определенные субъекты (владелец файла, группа файла, остальные пользователи) с конкретным файлом или каталогом.**
-
-**Посмотрим права доступа на файлы и каталоги в домашней директории user1:**
+Полученный результат:
 
 ```bash
-ls -la /home/user1
+[student@student-13 ~]$ sudo groupadd labusers
+[student@student-13 ~]$ sudo usermod -aG wheel user1
+[student@student-13 ~]$ sudo usermod -aG labusers user1
+[student@student-13 ~]$ sudo usermod -aG labusers user2
+[student@student-13 ~]$ getent group wheel labusers
+wheel:x:10:root,student,user1
+labusers:x:1004:user1,user2
 ```
 
-**Вывод консоли:**
+Создана группа `labusers` (GID 1004). `user1` добавлен в группу администраторов `wheel` (2.1), а `user1` и `user2` — в `labusers` (2.2). Ключ `-aG` добавляет пользователя в дополнительные группы, не затрагивая уже имеющиеся.
+
+## 3. Права доступа
+
+**Что такое права доступа.** Права доступа определяют, какие действия (чтение `r`, запись `w`, выполнение `x`) могут выполнять с файлом или каталогом три категории субъектов: владелец, группа владельца и все остальные пользователи.
+
+Использованная команда:
 
 ```bash
-total 20
-drwxr-xr-x 3 user1 user1 4096 Oct 19 10:00 .
-drwxr-xr-x 4 root  root  4096 Oct 19 10:00 ..
--rw-r--r-- 1 user1 user1  220 Oct 19 10:00 .bash_logout
--rw-r--r-- 1 user1 user1 3771 Oct 19 10:00 .bashrc
--rw-r--r-- 1 user1 user1  807 Oct 19 10:00 .profile
+sudo ls -la /home/user1
 ```
 
-## 4. Создание файла с заданными правами и работа с режимом 777
-**Создаем файл test.txt, доступный на чтение всем, а на запись только владельцу (правами 644).**
-
-**Команды:**
+Полученный результат:
 
 ```bash
-echo "Hello, Linux!" > /home/user1/test.txt
-chmod 644 /home/user1/test.txt
-ls -l /home/user1/test.txt
+[student@student-13 ~]$ sudo ls -la /home/user1
+total 56
+drwx------ 8 user1 user1 4096 Nov 23 11:13 .
+drwxr-xr-x 5 root  root  4096 Nov 23 11:13 ..
+-rw------- 1 user1 user1  217 Jul 26  2021 .bash_logout
+-rw------- 1 user1 user1  259 Jul 26  2021 .bash_profile
+-rw------- 1 user1 user1  188 Jul 26  2021 .bashrc
+drwx------ 2 user1 user1 4096 Jul 26  2021 .cache
+drwx------ 2 user1 user1 4096 Jul 26  2021 .config
+drwx------ 3 user1 user1 4096 Oct  7  2025 .local
+-rw------- 1 user1 user1   17 Jul 26  2021 .lpoptions
+drwx------ 3 user1 user1 4096 Oct  7  2025 .mutt
+-rw------- 1 user1 user1  121 Jul 26  2021 .rpmmacros
+drwx------ 2 user1 user1 4096 Oct  7  2025 .ssh
+-rwx------ 1 user1 user1  319 Jul 26  2021 .xprofile
+drwx------ 2 user1 user1 4096 Jul 26  2021 .xsession.d
 ```
 
-**4.1) Временная установка прав 777**
+Домашний каталог `user1` имеет права `drwx------` (700), файлы — `-rw-------` (600). Владелец и группа у всех объектов — `user1`. Доступ есть только у владельца: группа и остальные пользователи не имеют никаких прав.
+
+## 4. Файл с правами: читать всем, писать только владельцу
+
+Так как домашний каталог `user1` закрыт правами 700, другие пользователи не смогли бы до него добраться. Поэтому файл создан в `/tmp`, доступном всем.
+
+Использованные команды:
 
 ```bash
-chmod 777 /home/user1/test.txt
-ls -l /home/user1/test.txt
+echo "Hello, Linux!" > /tmp/lab_test.txt
+ls -l /tmp/lab_test.txt
+chmod 644 /tmp/lab_test.txt
+ls -l /tmp/lab_test.txt
 ```
 
-**Вывод консоли (до и после 777):**
+Полученный результат:
 
 ```bash
--rw-r--r-- 1 user1 user1 14 Oct 19 10:05 /home/user1/test.txt  (состояние до / после возврата)
--rwxrwxrwx 1 user1 user1 14 Oct 19 10:05 /home/user1/test.txt (состояние при 777)
+[student@student-13 ~]$ echo "Hello, Linux!" > /tmp/lab_test.txt
+[student@student-13 ~]$ ls -l /tmp/lab_test.txt
+-rw-r--r-- 1 student student 14 Nov 23 11:18 /tmp/lab_test.txt
+[student@student-13 ~]$ chmod 644 /tmp/lab_test.txt
+[student@student-13 ~]$ ls -l /tmp/lab_test.txt
+-rw-r--r-- 1 student student 14 Nov 23 11:18 /tmp/lab_test.txt
 ```
 
-**4.2) Почему настройка 777 избыточна?**
+Права `644` (`rw-r--r--`): владелец читает и пишет, группа и остальные только читают. Исходные права файла уже были такими (по умолчанию из `umask`), поэтому `chmod 644` их не изменил.
 
-**Настройка прав 777 разрешает абсолютно всем пользователям системы читать, записывать и выполнять файл. Это создает серьезную уязвимость безопасности, так как любой посторонний пользователь может случайно или намеренно изменить либо удалить важные данные.**
+### 4.1. Временная установка прав `777`
 
-**4.3) Возврат минимально необходимых прав**
+Использованные команды:
 
 ```bash
-chmod 644 /home/user1/test.txt
+chmod 777 /tmp/lab_test.txt
+ls -l /tmp/lab_test.txt
 ```
+
+Полученный результат:
+
+```bash
+[student@student-13 ~]$ chmod 777 /tmp/lab_test.txt
+[student@student-13 ~]$ ls -l /tmp/lab_test.txt
+-rwxrwxrwx 1 student student 14 Nov 23 11:18 /tmp/lab_test.txt
+```
+
+### 4.2. Почему `777` обычно избыточна
+
+Права `777` разрешают всем пользователям системы читать, изменять и выполнять файл. Запись для группы и остальных позволяет любому постороннему пользователю изменить или испортить содержимое, а право выполнения для обычного текстового файла не нужно вовсе. Это нарушает принцип наименьших привилегий и создаёт риск для безопасности. Для такого файла достаточно `644`.
+
+### 4.3. Возврат минимально необходимых прав
+
+Использованные команды:
+
+```bash
+chmod 644 /tmp/lab_test.txt
+ls -l /tmp/lab_test.txt
+```
+
+Полученный результат:
+
+```bash
+[student@student-13 ~]$ chmod 644 /tmp/lab_test.txt
+[student@student-13 ~]$ ls -l /tmp/lab_test.txt
+-rw-r--r-- 1 student student 14 Nov 23 11:18 /tmp/lab_test.txt
+```
+
+Состояние прав файла:
+
+| Этап | Права |
+|------|-------|
+| До изменения (644) | `-rw-r--r--` |
+| При временной установке 777 | `-rwxrwxrwx` |
+| После возврата к 644 | `-rw-r--r--` |
 
 ## 5. Встроенная учётная запись администратора
-**В операционных системах Linux встроенная учётная запись администратора с абсолютными правами называется root (суперпользователь).**
 
-## 6. Выполнение команды с административными правами
-**Для выполнения одной команды с административными правами используется утилита sudo (superuser do):**
+Встроенная учётная запись администратора в Linux называется **root** (суперпользователь), её UID равен 0.
+
+Использованная команда:
 
 ```bash
-sudo <команда>
+id root
 ```
 
-## 7. Ограничения суперпользователя (root)
+Полученный результат:
 
-**Хотя у root практически безграничные полномочия в пределах локальной системы, абсолютной возможности выполнить абсолютно любую операцию у него нет.**
+```bash
+[student@student-13 ~]$ id root
+uid=0(root) gid=0(root) groups=0(root),1(bin),2(daemon),3(sys),4(adm),6(disk),10(wheel),19(proc)
+```
 
-**Пример ограничения: В современных ядрах Linux и сетевых конфигурациях суперпользователь не может обойти ограничения SELinux или AppArmor (систем мандатного доступа), если политика безопасности явно запрещает определенное действие (например, доступ процесса к определенному сетевому порту или файлу), даже если файловые права выставлены максимально разрешающими. Также root не может изменять файлы на смонтированных в режиме чтения (read-only) файловых системах или сетевых ресурсах без прав записи.**
+## 6. Выполнение одной команды с административными правами
 
-## 8. Удаление пользователя user2 с сохранением каталога
-**Удаляем пользователя user2, но сохраняем его домашнюю директорию с помощью ключа -M (или не используя -r), после чего проверяем факт удаления.**
+Для этого используется `sudo`: команда выполняется от имени root, а сессия остаётся у обычного пользователя.
 
-**Команды:**
+Использованные команды:
+
+```bash
+sudo whoami
+whoami
+```
+
+Полученный результат:
+
+```bash
+[student@student-13 ~]$ sudo whoami
+root
+[student@student-13 ~]$ whoami
+student
+```
+
+`sudo whoami` вернул `root`, а следующий `whoami` показал `student`: права повышены только на одну команду.
+
+## 7. Возможности суперпользователя
+
+Нет, у root нет абсолютной возможности выполнить любую операцию. Пример ограничения не из-за обычных прав `rwx` — атрибут неизменяемости файла (`chattr +i`): пока он установлен, файл нельзя удалить, переименовать или изменить даже от root. Другие примеры — системы мандатного контроля доступа (SELinux, AppArmor) и файловые системы, смонтированные только для чтения.
+
+Использованные команды:
+
+```bash
+touch ~/immut_test.txt
+sudo chattr +i ~/immut_test.txt
+lsattr ~/immut_test.txt
+sudo rm -f ~/immut_test.txt
+sudo chattr -i ~/immut_test.txt
+sudo rm -f ~/immut_test.txt
+ls -l ~/immut_test.txt
+```
+
+Полученный результат:
+
+```bash
+[student@student-13 ~]$ touch ~/immut_test.txt
+[student@student-13 ~]$ sudo chattr +i ~/immut_test.txt
+[student@student-13 ~]$ lsattr ~/immut_test.txt
+----i---------e------- /home/student/immut_test.txt
+[student@student-13 ~]$ sudo rm -f ~/immut_test.txt
+rm: cannot remove '/home/student/immut_test.txt': Operation not permitted
+[student@student-13 ~]$ sudo chattr -i ~/immut_test.txt
+[student@student-13 ~]$ sudo rm -f ~/immut_test.txt
+[student@student-13 ~]$ ls -l ~/immut_test.txt
+ls: cannot access '/home/student/immut_test.txt': No such file or directory
+```
+
+Удаление файла с атрибутом `i` от имени root завершилось ошибкой `Operation not permitted`. После снятия атрибута файл удалился. Тестовый файл удалён, лишнего на сервере не осталось.
+
+## 8. Удаление `user2` с сохранением домашнего каталога
+
+Команда `userdel` без ключа `-r` удаляет учётную запись, но оставляет домашний каталог.
+
+Использованные команды:
 
 ```bash
 sudo userdel user2
 id user2
+getent passwd user2
 ls -ld /home/user2
+getent group labusers
 ```
 
-**Вывод консоли**
+Полученный результат:
 
 ```bash
-raddd1us@ubuntu:~$ sudo userdel user2
-raddd1us@ubuntu:~$ id user2
-id: 'user2': no such user
-raddd1us@ubuntu:~$ ls -ld /home/user2
-drwxr-xr-x 2 1002 1002 4096 Oct 19 10:02 /home/user2
+[student@student-13 ~]$ sudo userdel user2
+[student@student-13 ~]$ id user2
+id: ‘user2’: no such user
+[student@student-13 ~]$ getent passwd user2
+[student@student-13 ~]$ ls -ld /home/user2
+drwx------ 8 1002 1003 4096 Nov 23 11:13 /home/user2
+[student@student-13 ~]$ getent group labusers
+labusers:x:1004:user1
 ```
 
-*(Как видно из вывода, пользователь удален, а домашний каталог /home/user2 остался на месте).*
+Пользователь удалён: `id` сообщает, что такого пользователя нет, а `getent passwd` ничего не выводит. Из группы `labusers` он тоже исчез. Каталог `/home/user2` сохранился, но владелец и группа показаны числами (`1002 1003`), так как соответствующих имён в системе больше нет.
 
 ## 9. Изменение владельца и группы файла
 
-**Для изменения владельца и группы используется команда chown. Изменим владельца созданного ранее файла test.txt на root.**
+Владелец и группа меняются командой `chown владелец:группа объект` (только от root). Для каталогов с содержимым добавляется ключ `-R`. Изменим владельца и группу файла из пункта 4.
 
-**Команды:**
-
-```bash
-sudo chown root:labusers /home/user1/test.txt
-ls -l /home/user1/test.txt
-```
-
-**Вывод консоли:**
+Использованные команды:
 
 ```bash
--rw-r--r-- 1 root labusers 14 Oct 19 10:05 /home/user1/test.txt
+ls -l /tmp/lab_test.txt
+sudo chown user1:labusers /tmp/lab_test.txt
+ls -l /tmp/lab_test.txt
 ```
 
-## 10. Проверка UID, GID и групп пользователя user1
+Полученный результат:
 
-**Команда:**
+```bash
+[student@student-13 ~]$ ls -l /tmp/lab_test.txt
+-rw-r--r-- 1 student student 14 Nov 23 11:18 /tmp/lab_test.txt
+[student@student-13 ~]$ sudo chown user1:labusers /tmp/lab_test.txt
+[student@student-13 ~]$ ls -l /tmp/lab_test.txt
+-rw-r--r-- 1 user1 labusers 14 Nov 23 11:18 /tmp/lab_test.txt
+```
+
+Владелец файла изменился с `student` на `user1`, группа — с `student` на `labusers`. Права доступа остались прежними.
+
+## 10. UID, основной GID и дополнительные группы `user1`
+
+Использованные команды:
 
 ```bash
 id user1
+groups user1
+getent passwd user1
 ```
 
-**Вывод консоли:**
+Полученный результат:
+
 ```bash
-uid=1001(user1) gid=1001(user1) groups=1001(user1),27(sudo),1003(labusers)
+[student@student-13 ~]$ id user1
+uid=1001(user1) gid=1002(user1) groups=1002(user1),10(wheel),1004(labusers)
+[student@student-13 ~]$ groups user1
+user1 : user1 wheel labusers
+[student@student-13 ~]$ getent passwd user1
+user1:x:1001:1002::/home/user1:/bin/bash
 ```
 
-## Краткое пояснение назначения прав r, w, x
+У `user1` UID равен 1001, основной GID — 1002 (группа `user1`), дополнительные группы — `wheel` (10) и `labusers` (1004).
 
-## Для файлов:
-- r (read / чтение): Разрешает чтение содержимого файла.
+## Назначение прав `r`, `w`, `x`
 
-- w (write / запись): Разрешает изменять или перезаписывать файл.
+Для файлов:
 
-- x (execute / выполнение): Разрешает запуск файла как программы или скрипта.
+- `r` (read) — чтение содержимого файла;
+- `w` (write) — изменение и перезапись содержимого файла;
+- `x` (execute) — запуск файла как программы или скрипта.
 
-## Для каталогов:
+Для каталогов:
 
-- r (read / чтение): Разрешает просмотр содержимого каталога (списка файлов).
+- `r` (read) — просмотр списка файлов в каталоге;
+- `w` (write) — создание, удаление и переименование файлов внутри каталога;
+- `x` (execute) — вход в каталог (`cd`) и доступ к файлам внутри по известным именам.
 
-- w (write / запись): Разрешает создавать, удалять и переименовывать файлы внутри каталога.
+## Очистка
 
-- x (execute / выполнение): Разрешает переходить в каталог (cd) и получать доступ к файлам по их известным именам (проходить сквозь каталог).
+Тестовый файл `/tmp/lab_test.txt` удалён.
+
+```bash
+[student@student-13 ~]$ sudo rm -f /tmp/lab_test.txt
+[student@student-13 ~]$ ls -l /tmp/lab_test.txt
+ls: cannot access '/tmp/lab_test.txt': No such file or directory
+```
+
+## Критерий приёмки
+
+- команды создания `user1`, `user2` и группы `labusers` — пункты 1 и 2;
+- вывод, подтверждающий оболочки пользователей, — пункт 1.1–1.2 (`/etc/passwd`);
+- вывод `id` для подтверждения UID, GID и групп — пункт 10;
+- команда и результат настройки прав на созданный файл — пункт 4;
+- состояние прав файла до и после возврата от `777` к минимально необходимым — пункт 4 (таблица);
+- команда изменения владельца и группы файла — пункт 9;
+- подтверждение удаления `user2` — пункт 8;
+- краткое пояснение назначения `r`, `w`, `x` для файла и каталога — раздел «Назначение прав `r`, `w`, `x`».
 
 
 
