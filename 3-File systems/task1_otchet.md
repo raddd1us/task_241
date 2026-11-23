@@ -27,6 +27,7 @@
 
 # Отчёт по практической работе: Файловые системы
 
+
 ## 1. Известные файловые системы
 
 **Дисковые (локальные):**
@@ -37,16 +38,19 @@
 - `FAT16/FAT32`, `exFAT`, `NTFS` — Windows и сменные носители;
 - `APFS`, `HFS+` — macOS;
 - `ISO 9660`, `UDF` — оптические диски.
+
 **Сетевые:**
 - `NFS`, `CIFS/SMB` — доступ к удалённым каталогам;
 - `SSHFS` (на базе FUSE), `Ceph`, `GlusterFS` — распределённые и сетевые хранилища.
+
 **Виртуальные (псевдо-):**
 - `procfs` (`/proc`), `sysfs` (`/sys`), `tmpfs`, `devtmpfs` (`/dev`), `devpts`, `cgroup2`, `debugfs`, `securityfs`.
+
 **Наслаиваемые и сжатые:**
 - `overlayfs` (контейнеры), `squashfs` (образы Live-систем, snap).
 
 ## 2. Классификация файловых систем
- 
+
 | Признак | Классы | Отличия |
 |---|---|---|
 | Место хранения данных | дисковые, сетевые, виртуальные | дисковые хранят данные на блочном устройстве, сетевые обращаются к удалённому серверу, виртуальные существуют в ОЗУ или отражают структуры ядра |
@@ -56,405 +60,372 @@
 | Размещение | локальные и кластерные | кластерные и сетевые обслуживают одновременный доступ с нескольких узлов |
 | Поддержка прав доступа | с правами POSIX (`ext4`, `XFS`) и без них (`FAT32`, `exFAT`) | на `FAT` нет владельцев и режимов, права задаются опциями монтирования |
 
-## 3. Файловые системы, обычно используемые в Linux
- 
-- `ext4` — по умолчанию в Ubuntu и Debian;
-- `XFS` — по умолчанию в RHEL и производных, хорошо работает с большими файлами и томами;
-- `Btrfs` — по умолчанию в openSUSE и Fedora Workstation;
-- `vfat` — системный раздел EFI (`/boot/efi`);
+## 3. Файловые системы, используемые в Linux
+
+В Linux обычно используются:
+- `ext4` — самая распространённая дисковая файловая система;
+- `XFS`, `Btrfs` — для больших томов и расширенных возможностей (снимки, CoW);
+- `vfat` — системный раздел EFI;
 - `tmpfs`, `proc`, `sysfs`, `devtmpfs`, `cgroup2` — служебные виртуальные системы;
-- `squashfs` — образы snap-пакетов;
+- `squashfs` — сжатые образы только для чтения;
 - `nfs`, `cifs` — сетевые ресурсы.
-Узнать, какие типы поддерживает текущее ядро:
- 
+
+Список типов, которые поддерживает ядро сервера:
+
 ```bash
-cat /proc/filesystems
+[student@student-13 ~]$ cat /proc/filesystems
+nodev   sysfs
+nodev   tmpfs
+nodev   bdev
+nodev   proc
+nodev   cgroup
+nodev   cgroup2
+nodev   devtmpfs
+nodev   configfs
+nodev   debugfs
+nodev   tracefs
+nodev   securityfs
+nodev   sockfs
+nodev   bpf
+nodev   pipefs
+nodev   ramfs
+nodev   hugetlbfs
+nodev   devpts
+        ext3
+        ext4
+        squashfs
+nodev   mqueue
+nodev   pstore
+nodev   autofs
+        fuseblk
+nodev   fuse
+nodev   fusectl
 ```
- 
-```text
-nodev	sysfs
-nodev	tmpfs
-nodev	bdev
-nodev	proc
-nodev	cgroup2
-nodev	devtmpfs
-nodev	devpts
-nodev	overlay
-	ext4
-	vfat
-	squashfs
-	iso9660
-	xfs
-	btrfs
-```
- 
-Пометка `nodev` означает, что файловой системе не нужно блочное устройство.
+
+Пометка `nodev` означает, что файловой системе не нужно блочное устройство. Из дисковых типов ядро сейчас поддерживает `ext3`, `ext4`, `squashfs` и `fuseblk` (FUSE поверх блочного устройства); остальные записи — виртуальные файловые системы.
 
 ## 4. Создание файловой системы на блочном устройстве
- 
-Определяем доступные устройства:
- 
+
+Общий вид: `mkfs.<тип> <устройство>` или `mkfs -t <тип> <устройство>`, например `mkfs.ext4 /dev/sdb1`. Команда уничтожает данные на устройстве, поэтому перед запуском нужно проверить его имя.
+
+Блочные устройства на сервере:
+
 ```bash
-lsblk -f
+[student@student-13 ~]$ lsblk -f
+NAME   FSTYPE FSVER LABEL UUID                                 FSAVAIL FSUSE% MOUNTPOINTS
+sda
+└─sda1 ext4   1.0         93c203a1-7a96-4cd1-a5f8-ed900f7b23ab   13.2G     6% /
+sdb
+sdc
+sr0
 ```
- 
-Форматирование раздела (все данные на нём будут уничтожены, поэтому перед запуском нужно проверить имя устройства):
- 
+
+Чтобы не трогать диски `sdb` и `sdc`, файловая система создаётся на файле-образе, который ядро подключает как loop-устройство. Утилиты `mkfs.ext4`, `losetup` и `blkid` лежат в `/sbin`, которого нет в `PATH` обычного пользователя, поэтому они вызываются по полному пути через `sudo`.
+
+Создание образа и файловой системы ext4:
+
 ```bash
-sudo mkfs.ext4 /dev/sdb1
-```
- 
-Эквивалентная форма: `sudo mkfs -t ext4 /dev/sdb1`. Для других систем: `mkfs.xfs`, `mkfs.btrfs`, `mkfs.vfat`.
- 
-Чтобы не рисковать реальным диском, в работе используем файл-образ, который ядро подключит как блочное устройство (loop):
- 
-```bash
-truncate -s 100M /tmp/disk.img
-sudo mkfs.ext4 -F /tmp/disk.img
-```
- 
-```text
-mke2fs 1.47.0 (5-Feb-2023)
+[student@student-13 ~]$ truncate -s 64M /tmp/disk.img
+[student@student-13 ~]$ ls -lh /tmp/disk.img
+-rw-r--r-- 1 student student 64M Nov 23 17:39 /tmp/disk.img
+[student@student-13 ~]$ sudo /sbin/mkfs.ext4 -F /tmp/disk.img
+mke2fs 1.47.1 (20-May-2024)
 Discarding device blocks: done
-Creating filesystem with 25600 4k blocks and 25600 inodes
- 
+Creating filesystem with 65536 1k blocks and 16384 inodes
+Filesystem UUID: e54116c2-6fad-4651-bc63-07b1228530fe
+Superblock backups stored on blocks:
+        8193, 24577, 40961, 57345
+
 Allocating group tables: done
 Writing inode tables: done
-Creating journal (1024 blocks): done
+Creating journal (4096 blocks): done
 Writing superblocks and filesystem accounting information: done
 ```
- 
+
+Ключ `-F` нужен, потому что `mkfs` работает с обычным файлом, а не с блочным устройством.
+
 Проверка результата:
- 
+
 ```bash
-blkid /tmp/disk.img
+[student@student-13 ~]$ sudo /sbin/blkid /tmp/disk.img
+/tmp/disk.img: UUID="e54116c2-6fad-4651-bc63-07b1228530fe" BLOCK_SIZE="1024" TYPE="ext4"
 ```
- 
-```text
-/tmp/disk.img: UUID="3f6c9a1e-5b2d-4c7a-9e84-1d0f7a6b2c35" BLOCK_SIZE="4096" TYPE="ext4"
-```
+
+Файловая система ext4 создана, её UUID: `e54116c2-6fad-4651-bc63-07b1228530fe`.
 
 ## 5. Монтирование
- 
-**Монтирование** — это подключение файловой системы к дереву каталогов. Каталог, в который она подключается, называется **точкой монтирования**. Содержимое файловой системы становится доступным по этому пути, а прежнее содержимое каталога на время монтирования скрывается.
- 
-Подключение созданного образа:
- 
+
+**Монтирование** — это подключение файловой системы к дереву каталогов. Каталог, в который она подключается, называется **точкой монтирования**. Содержимое файловой системы становится доступным по этому пути, а прежнее содержимое каталога на время монтирования скрывается. Общий вид команды: `mount -t <тип> -o <опции> <устройство> <каталог>`; отключение выполняет `umount`.
+
+Создание точки монтирования и подключение образа:
+
 ```bash
-sudo mkdir -p /mnt/test
-sudo mount -o loop /tmp/disk.img /mnt/test
-```
- 
-Проверка:
- 
-```bash
-df -hT /mnt/test
-```
- 
-```text
+[student@student-13 ~]$ sudo mkdir -p /mnt/test
+[student@student-13 ~]$ sudo mount -o loop /tmp/disk.img /mnt/test
+[student@student-13 ~]$ findmnt /mnt/test
+TARGET    SOURCE     FSTYPE OPTIONS
+/mnt/test /dev/loop0 ext4   rw,relatime
+[student@student-13 ~]$ df -hT /mnt/test
 Filesystem     Type  Size  Used Avail Use% Mounted on
-/dev/loop12    ext4   89M   24K   82M   1% /mnt/test
+/dev/loop0     ext4   55M   46K   51M   1% /mnt/test
 ```
- 
-Запись файла для проверки:
- 
+
+Файловая система на `/dev/loop0` примонтирована в `/mnt/test`.
+
+Запись тестового файла:
+
 ```bash
-echo "hello" | sudo tee /mnt/test/file.txt
-ls -l /mnt/test
-```
- 
-```text
+[student@student-13 ~]$ echo "hello" | sudo tee /mnt/test/file.txt
 hello
-total 20
--rw-r--r-- 1 root root     6 Oct 31 12:10 file.txt
-drwx------ 2 root root 16384 Oct 31 12:08 lost+found
+[student@student-13 ~]$ ls -l /mnt/test
+total 13
+-rw-r--r-- 1 root root     6 Nov 23 17:41 file.txt
+drwx------ 2 root root 12288 Nov 23 17:40 lost+found
 ```
- 
-Отключение:
- 
+
+Каталог `lost+found` ext4 создаёт автоматически при создании файловой системы.
+
+Отключение и проверка:
+
 ```bash
-sudo umount /mnt/test
+[student@student-13 ~]$ sudo umount /mnt/test
+[student@student-13 ~]$ findmnt /mnt/test; echo "код возврата findmnt: $?"
+код возврата findmnt: 1
+[student@student-13 ~]$ ls -l /mnt/test
+total 0
+[student@student-13 ~]$ sudo mount -o loop /tmp/disk.img /mnt/test
+[student@student-13 ~]$ ls -l /mnt/test
+total 13
+-rw-r--r-- 1 root root     6 Nov 23 17:41 file.txt
+drwx------ 2 root root 12288 Nov 23 17:40 lost+found
+[student@student-13 ~]$ sudo umount /mnt/test
 ```
- 
-Общий вид команды: `mount -t <тип> -o <опции> <устройство> <каталог>`.
- 
-**Постоянное монтирование** при загрузке настраивается в `/etc/fstab`:
- 
-```text
-UUID=3f6c9a1e-5b2d-4c7a-9e84-1d0f7a6b2c35  /mnt/test  ext4  defaults  0  2
-```
- 
-Проверка записи без перезагрузки: `sudo mount -a`.
+
+После `umount` каталог `/mnt/test` пуст: виден сам каталог на корневой файловой системе, а не содержимое образа. После повторного монтирования `file.txt` возвращается: файл всё это время хранился внутри `/tmp/disk.img`, а каталог служит только точкой подключения.
 
 ## 6. Файловые системы `procfs`, `sysfs`, `tmpfs`, `cifs`
- 
+
 ### 6.1 Особенности
- 
+
 | ФС | Особенности |
 |---|---|
-| `procfs` | Монтируется в `/proc`. Интерфейс к информации о процессах (`/proc/<PID>/`) и о состоянии ядра (`cpuinfo`, `meminfo`, `mounts`, `uptime`). Файлы создаются ядром «на лету», на диске их нет. Часть параметров можно менять через `/proc/sys` (`sysctl`). |
-| `sysfs` | Монтируется в `/sys`. Структурированное представление устройств, шин, драйверов и модулей ядра (`/sys/class`, `/sys/block`, `/sys/devices`). Один файл содержит одно значение. Через него настраиваются отдельные параметры устройств. |
-| `tmpfs` | Файловая система в оперативной памяти (и при нехватке в swap). Очень быстрая, размер ограничивается опцией `size=`, содержимое пропадает при размонтировании и перезагрузке. Используется для `/run`, `/dev/shm`, `/tmp` (в некоторых дистрибутивах). |
-| `cifs` | Клиент сетевого протокола SMB/CIFS для доступа к общим папкам Windows и Samba. Требует пакет `cifs-utils`, адрес сервера, имя пользователя и пароль. Права доступа определяются сервером и опциями монтирования (`uid=`, `gid=`, `file_mode=`). |
- 
+| `procfs` | Монтируется в `/proc`. Интерфейс к информации о процессах (`/proc/<PID>/`) и о состоянии ядра (`cpuinfo`, `meminfo`, `mounts`). Файлы создаются ядром «на лету», на диске их нет. Часть параметров можно менять через `/proc/sys` (`sysctl`). |
+| `sysfs` | Монтируется в `/sys`. Структурированное представление устройств, шин, драйверов и модулей ядра (`/sys/class`, `/sys/block`, `/sys/devices`). Один файл содержит одно значение. |
+| `tmpfs` | Файловая система в оперативной памяти (при нехватке — в swap). Очень быстрая, размер ограничивается опцией `size=`, содержимое пропадает при размонтировании и перезагрузке. Используется для `/run`, `/dev/shm`, `/tmp`. |
+| `cifs` | Клиент сетевого протокола SMB/CIFS для доступа к общим папкам Windows и Samba. Требует пакет `cifs-utils`, адрес сервера, имя пользователя и пароль. Права определяются сервером и опциями монтирования (`uid=`, `gid=`, `file_mode=`). |
+
 ### 6.2 Точки монтирования в системе
- 
+
 ```bash
-findmnt -t proc,sysfs,tmpfs,cifs
-```
- 
-```text
-TARGET          SOURCE FSTYPE OPTIONS
-/sys            sysfs  sysfs  rw,nosuid,nodev,noexec,relatime
-/proc           proc   proc   rw,nosuid,nodev,noexec,relatime
-/dev/shm        tmpfs  tmpfs  rw,nosuid,nodev,inode64
-/run            tmpfs  tmpfs  rw,nosuid,nodev,noexec,relatime,size=401512k,mode=755,inode64
-/run/lock       tmpfs  tmpfs  rw,nosuid,nodev,noexec,relatime,size=5120k,inode64
-/run/user/1000  tmpfs  tmpfs  rw,nosuid,nodev,relatime,size=401508k,nr_inodes=100377,mode=700,uid=1000,gid=1000,inode64
-```
- 
-Отдельная проверка для `cifs`:
- 
-```bash
-findmnt -t cifs
-echo "код возврата: $?"
-```
- 
-```text
-код возврата: 1
-```
- 
-Вывод пустой, поэтому `cifs` в системе не используется: сетевые ресурсы SMB не подключены. Для справки, подключение выглядело бы так:
- 
-```bash
-sudo apt install cifs-utils
-sudo mount -t cifs //192.168.1.10/share /mnt/smb -o username=user,uid=1000
+[student@student-13 ~]$ findmnt -t proc,sysfs,tmpfs,cifs
+TARGET                            SOURCE FSTYPE OPTIONS
+/proc                             proc   proc   rw,nosuid,noexec,relatime,gid=19
+/dev/shm                          tmpfs  tmpfs  rw,nosuid,nodev,inode64
+/run                              runfs  tmpfs  rw,relatime,mode=755,inode64
+├─/run/credentials/systemd-journald.service
+│                                 tmpfs  tmpfs  ro,nosuid,nodev,noexec,relatime,nosymfollow,size=1024k,nr_inodes=1024,mo
+├─/run/user/1000                  tmpfs  tmpfs  rw,nosuid,nodev,relatime,size=150256k,nr_inodes=37564,mode=700,uid=1000,
+├─/run/credentials/systemd-resolved.service
+│                                 tmpfs  tmpfs  ro,nosuid,nodev,noexec,relatime,nosymfollow,size=1024k,nr_inodes=1024,mo
+├─/run/credentials/systemd-networkd.service
+│                                 tmpfs  tmpfs  ro,nosuid,nodev,noexec,relatime,nosymfollow,size=1024k,nr_inodes=1024,mo
+└─/run/credentials/getty@tty1.service
+                                  tmpfs  tmpfs  ro,nosuid,nodev,noexec,relatime,nosymfollow,size=1024k,nr_inodes=1024,mo
+/sys                              sysfs  sysfs  rw,nosuid,nodev,noexec,relatime
+/tmp                              tmpfs  tmpfs  rw,nosuid,relatime,inode64
 ```
 
+- `procfs` смонтирована в `/proc`;
+- `sysfs` смонтирована в `/sys`;
+- `tmpfs` смонтирована в `/dev/shm`, `/run` (источник называется `runfs`, тип `tmpfs`), `/run/user/1000`, `/tmp` и в каталогах `/run/credentials/...`.
+
+Проверка `cifs`:
+
+```bash
+[student@student-13 ~]$ findmnt -t cifs; echo "код возврата findmnt -t cifs: $?"
+код возврата findmnt -t cifs: 0
+[student@student-13 ~]$ grep cifs /proc/mounts; echo "код возврата grep: $?"
+код возврата grep: 1
+```
+
+Вывод `findmnt -t cifs` пуст, а `grep` не нашёл `cifs` в `/proc/mounts` и вернул код 1. Значит, `cifs` в системе не используется: сетевые ресурсы SMB не подключены.
+
 ## 7. Информация о системе из виртуальных файловых систем
- 
+
 ### 7.1 Информация о процессоре
- 
+
 ```bash
-cat /proc/cpuinfo
+[student@student-13 ~]$ head -n 15 /proc/cpuinfo
+processor       : 0
+vendor_id       : GenuineIntel
+cpu family      : 6
+model           : 44
+model name      : Intel(R) Xeon(R) CPU           X5675  @ 3.07GHz
+stepping        : 2
+microcode       : 0x1f
+cpu MHz         : 3066.774
+cache size      : 16384 KB
+physical id     : 0
+siblings        : 1
+core id         : 0
+cpu cores       : 1
+apicid          : 0
+initial apicid  : 0
+[student@student-13 ~]$ grep -c '^processor' /proc/cpuinfo
+1
 ```
- 
-Фрагмент вывода:
- 
-```text
-processor	: 0
-vendor_id	: GenuineIntel
-cpu family	: 6
-model		: 140
-model name	: 11th Gen Intel(R) Core(TM) i5-1135G7 @ 2.40GHz
-stepping	: 1
-cpu MHz		: 2419.200
-cache size	: 8192 KB
-cpu cores	: 2
-flags		: fpu vme de pse tsc msr pae mce cx8 apic sep ... avx avx2 ...
-```
- 
-Краткая сводка:
- 
-```bash
-grep -m1 'model name' /proc/cpuinfo
-grep -c '^processor' /proc/cpuinfo
-```
- 
-```text
-model name	: 11th Gen Intel(R) Core(TM) i5-1135G7 @ 2.40GHz
-2
-```
- 
-Первая команда выводит модель процессора, вторая — число логических процессоров. Версию ядра показывает `cat /proc/version`.
- 
+
+Процессор: Intel Xeon X5675, 3.07 GHz, кэш 16384 КБ. Логический процессор один, ядро одно.
+
 ### 7.2 Состояние памяти
- 
+
 ```bash
-cat /proc/meminfo
+[student@student-13 ~]$ head -n 10 /proc/meminfo
+MemTotal:        1502576 kB
+MemFree:         1299148 kB
+MemAvailable:    1286816 kB
+Buffers:           19952 kB
+Cached:            92168 kB
+SwapCached:            0 kB
+Active:            58904 kB
+Inactive:          76196 kB
+Active(anon):        792 kB
+Inactive(anon):    23120 kB
+[student@student-13 ~]$ grep -E 'MemTotal|MemFree|MemAvailable|SwapTotal|SwapFree' /proc/meminfo
+MemTotal:        1502576 kB
+MemFree:         1299148 kB
+MemAvailable:    1286828 kB
+SwapTotal:             0 kB
+SwapFree:              0 kB
 ```
- 
-Фрагмент вывода:
- 
-```text
-MemTotal:        4015120 kB
-MemFree:         2201344 kB
-MemAvailable:    3174568 kB
-Buffers:           64212 kB
-Cached:           987456 kB
-SwapTotal:       2097148 kB
-SwapFree:        2097148 kB
-```
- 
-Основные поля: `MemTotal` — всего ОЗУ, `MemFree` — полностью свободная, `MemAvailable` — реально доступная приложениям с учётом кэша, `SwapTotal` и `SwapFree` — раздел подкачки.
- 
-```bash
-grep -E 'MemTotal|MemAvailable|SwapTotal' /proc/meminfo
-```
- 
-```text
-MemTotal:        4015120 kB
-MemAvailable:    3174568 kB
-SwapTotal:       2097148 kB
-```
- 
-### Информация из `/sys`
- 
-```bash
-cat /sys/class/net/*/address
-ls /sys/block
-cat /sys/devices/system/cpu/online
-```
- 
-```text
-00:00:00:00:00:00
-08:00:27:4b:3a:91
-loop0  loop1  sda  sr0
-0-1
-```
- 
-Первая команда выводит MAC-адреса сетевых интерфейсов, вторая — список блочных устройств, третья — номера работающих процессорных ядер.
- 
+
+Основные поля: `MemTotal` — всего ОЗУ (около 1,4 ГиБ), `MemFree` — полностью свободная память, `MemAvailable` — память, реально доступная приложениям с учётом кэша, `SwapTotal` и `SwapFree` — подкачка. Раздела или файла подкачки на сервере нет (0 кБ). Значения `MemAvailable` в двух запусках немного отличаются, потому что `/proc/meminfo` показывает состояние памяти на момент чтения.
+
 ## 8. Список текущих точек монтирования
- 
+
 **Способ 1. `findmnt`** (дерево монтирования):
- 
+
 ```bash
-findmnt
+[student@student-13 ~]$ findmnt
+TARGET                           SOURCE  FSTYPE     OPTIONS
+/                                /dev/sda1
+                                         ext4       rw,relatime
+├─/proc                          proc    proc       rw,nosuid,noexec,relatime,gid=19
+│ └─/proc/sys/fs/binfmt_misc     systemd-1
+│                                        autofs     rw,relatime,fd=36,pgrp=1,timeout=0,minproto=5,maxproto=5,direct,pipe
+├─/dev                           udevfs  devtmpfs   rw,relatime,size=5120k,nr_inodes=184459,mode=755,inode64
+│ ├─/dev/shm                     tmpfs   tmpfs      rw,nosuid,nodev,inode64
+│ ├─/dev/pts                     devpts  devpts     rw,nosuid,noexec,relatime,gid=5,mode=620,ptmxmode=666
+│ ├─/dev/mqueue                  mqueue  mqueue     rw,nosuid,nodev,noexec,relatime
+│ └─/dev/hugepages               hugetlbfs
+│                                        hugetlbfs  rw,nosuid,nodev,relatime,pagesize=2M
+├─/run                           runfs   tmpfs      rw,relatime,mode=755,inode64
+│ ├─/run/credentials/systemd-journald.service
+│ │                              tmpfs   tmpfs      ro,nosuid,nodev,noexec,relatime,nosymfollow,size=1024k,nr_inodes=102
+│ ├─/run/user/1000               tmpfs   tmpfs      rw,nosuid,nodev,relatime,size=150256k,nr_inodes=37564,mode=700,uid=1
+│ ├─/run/credentials/systemd-resolved.service
+│ │                              tmpfs   tmpfs      ro,nosuid,nodev,noexec,relatime,nosymfollow,size=1024k,nr_inodes=102
+│ ├─/run/credentials/systemd-networkd.service
+│ │                              tmpfs   tmpfs      ro,nosuid,nodev,noexec,relatime,nosymfollow,size=1024k,nr_inodes=102
+│ └─/run/credentials/getty@tty1.service
+│                                tmpfs   tmpfs      ro,nosuid,nodev,noexec,relatime,nosymfollow,size=1024k,nr_inodes=102
+├─/sys                           sysfs   sysfs      rw,nosuid,nodev,noexec,relatime
+│ ├─/sys/kernel/security         securityfs
+│ │                                      securityfs rw,nosuid,nodev,noexec,relatime
+│ ├─/sys/fs/cgroup               cgroup2 cgroup2    rw,nosuid,nodev,noexec,relatime,nsdelegate,memory_recursiveprot
+│ ├─/sys/fs/pstore               pstore  pstore     rw,nosuid,nodev,noexec,relatime
+│ ├─/sys/fs/bpf                  bpf     bpf        rw,nosuid,nodev,noexec,relatime,mode=700
+│ ├─/sys/kernel/tracing          tracefs tracefs    rw,nosuid,nodev,noexec,relatime
+│ ├─/sys/kernel/config           configfs
+│ │                                      configfs   rw,nosuid,nodev,noexec,relatime
+│ ├─/sys/kernel/debug            debugfs debugfs    rw,nosuid,nodev,noexec,relatime
+│ └─/sys/fs/fuse/connections     fusectl fusectl    rw,nosuid,nodev,noexec,relatime
+└─/tmp                           tmpfs   tmpfs      rw,nosuid,relatime,inode64
 ```
- 
-```text
-TARGET                  SOURCE      FSTYPE   OPTIONS
-/                       /dev/sda2   ext4     rw,relatime
-├─/sys                  sysfs       sysfs    rw,nosuid,nodev,noexec,relatime
-├─/proc                 proc        proc     rw,nosuid,nodev,noexec,relatime
-├─/dev                  udev        devtmpfs rw,nosuid,relatime,size=1962448k,nr_inodes=490612,mode=755
-│ ├─/dev/pts            devpts      devpts   rw,nosuid,noexec,relatime,gid=5,mode=620,ptmxmode=000
-│ └─/dev/shm            tmpfs       tmpfs    rw,nosuid,nodev,inode64
-├─/run                  tmpfs       tmpfs    rw,nosuid,nodev,noexec,relatime,size=401512k,mode=755
-└─/boot/efi             /dev/sda1   vfat     rw,relatime,fmask=0077,dmask=0077
-```
- 
-**Способ 2. Чтение `/proc/mounts`:**
- 
+
+**Способ 2. Чтение `/proc/mounts`** (таблица монтирования, которую ядро отдаёт напрямую):
+
 ```bash
-cat /proc/mounts | head -n 8
-```
- 
-```text
+[student@student-13 ~]$ cat /proc/mounts
+udevfs /dev devtmpfs rw,relatime,size=5120k,nr_inodes=184459,mode=755,inode64 0 0
+runfs /run tmpfs rw,relatime,mode=755,inode64 0 0
+/dev/sda1 / ext4 rw,relatime 0 0
+proc /proc proc rw,nosuid,noexec,relatime,gid=19 0 0
 sysfs /sys sysfs rw,nosuid,nodev,noexec,relatime 0 0
-proc /proc proc rw,nosuid,nodev,noexec,relatime 0 0
-udev /dev devtmpfs rw,nosuid,relatime,size=1962448k,nr_inodes=490612,mode=755 0 0
-devpts /dev/pts devpts rw,nosuid,noexec,relatime,gid=5,mode=620,ptmxmode=000 0 0
-tmpfs /run tmpfs rw,nosuid,nodev,noexec,relatime,size=401512k,mode=755 0 0
-/dev/sda2 / ext4 rw,relatime 0 0
-tmpfs /dev/shm tmpfs rw,nosuid,nodev 0 0
-/dev/sda1 /boot/efi vfat rw,relatime,fmask=0077,dmask=0077 0 0
+securityfs /sys/kernel/security securityfs rw,nosuid,nodev,noexec,relatime 0 0
+tmpfs /dev/shm tmpfs rw,nosuid,nodev,inode64 0 0
+devpts /dev/pts devpts rw,nosuid,noexec,relatime,gid=5,mode=620,ptmxmode=666 0 0
+cgroup2 /sys/fs/cgroup cgroup2 rw,nosuid,nodev,noexec,relatime,nsdelegate,memory_recursiveprot 0 0
+pstore /sys/fs/pstore pstore rw,nosuid,nodev,noexec,relatime 0 0
+bpf /sys/fs/bpf bpf rw,nosuid,nodev,noexec,relatime,mode=700 0 0
+systemd-1 /proc/sys/fs/binfmt_misc autofs rw,relatime,fd=36,pgrp=1,timeout=0,minproto=5,maxproto=5,direct,pipe_ino=2620 0 0
+tmpfs /run/credentials/systemd-journald.service tmpfs ro,nosuid,nodev,noexec,relatime,nosymfollow,size=1024k,nr_inodes=1024,mode=700,inode64,noswap 0 0
+tracefs /sys/kernel/tracing tracefs rw,nosuid,nodev,noexec,relatime 0 0
+mqueue /dev/mqueue mqueue rw,nosuid,nodev,noexec,relatime 0 0
+hugetlbfs /dev/hugepages hugetlbfs rw,nosuid,nodev,relatime,pagesize=2M 0 0
+configfs /sys/kernel/config configfs rw,nosuid,nodev,noexec,relatime 0 0
+debugfs /sys/kernel/debug debugfs rw,nosuid,nodev,noexec,relatime 0 0
+tmpfs /run/credentials/systemd-resolved.service tmpfs ro,nosuid,nodev,noexec,relatime,nosymfollow,size=1024k,nr_inodes=1024,mode=700,inode64,noswap 0 0
+tmpfs /tmp tmpfs rw,nosuid,relatime,inode64 0 0
+fusectl /sys/fs/fuse/connections fusectl rw,nosuid,nodev,noexec,relatime 0 0
+tmpfs /run/credentials/systemd-networkd.service tmpfs ro,nosuid,nodev,noexec,relatime,nosymfollow,size=1024k,nr_inodes=1024,mode=700,inode64,noswap 0 0
+tmpfs /run/credentials/getty@tty1.service tmpfs ro,nosuid,nodev,noexec,relatime,nosymfollow,size=1024k,nr_inodes=1024,mode=700,inode64,noswap 0 0
+tmpfs /run/user/1000 tmpfs rw,nosuid,nodev,relatime,size=150256k,nr_inodes=37564,mode=700,uid=1000,gid=1001,inode64 0 0
 ```
- 
-**Способ 3. Команда `mount`:**
- 
-```bash
-mount | grep -E '^/dev/|^proc|^sysfs'
-```
- 
-```text
-sysfs on /sys type sysfs (rw,nosuid,nodev,noexec,relatime)
-proc on /proc type proc (rw,nosuid,nodev,noexec,relatime)
-/dev/sda2 on / type ext4 (rw,relatime)
-/dev/sda1 on /boot/efi type vfat (rw,relatime,fmask=0077,dmask=0077)
-```
- 
-**Способ 4. `df -hT`** (только с учётом занятого места и типа):
- 
-```bash
-df -hT
-```
- 
-```text
-Filesystem     Type      Size  Used Avail Use% Mounted on
-tmpfs          tmpfs     393M  1.4M  392M   1% /run
-/dev/sda2      ext4       24G  9.8G   13G  44% /
-tmpfs          tmpfs     2.0G     0  2.0G   0% /dev/shm
-/dev/sda1      vfat      511M  6.1M  505M   2% /boot/efi
-```
- 
+
+Оба способа показывают один и тот же набор точек монтирования: `findmnt` — в виде дерева, `/proc/mounts` — плоским списком. Тестовый каталог `/mnt/test` в списках отсутствует, так как к этому моменту он уже отмонтирован.
+
 ## 9. Определение типа файловой системы для точки монтирования
- 
-Выбираем точку монтирования `/`:
- 
+
+Для корневого каталога `/`:
+
 ```bash
-findmnt -n -o SOURCE,FSTYPE /
+[student@student-13 ~]$ findmnt -n -o SOURCE,FSTYPE /
+/dev/sda1 ext4
 ```
- 
-```text
-/dev/sda2 ext4
-```
- 
-Другие способы для того же каталога:
- 
+
+Корень находится на устройстве `/dev/sda1`, тип файловой системы — `ext4`. Для виртуальных файловых систем:
+
 ```bash
-df -T /
-stat -f -c 'Тип: %T' /
-lsblk -f /dev/sda2
-```
- 
-```text
-Filesystem     Type 1K-blocks     Used Available Use% Mounted on
-/dev/sda2      ext4  24505644 10276892  12961000  45% /
- 
-Тип: ext2/ext3
- 
-NAME FSTYPE FSVER LABEL UUID                                 FSAVAIL FSUSE% MOUNTPOINTS
-sda2 ext4   1.0         8c1d5e7f-2a9b-4f3e-b6d4-7e0a1c9f5b23   12.4G    44% /
-```
- 
-`stat -f` показывает `ext2/ext3` потому, что `ext4` использует то же магическое число суперблока, что и его предшественники. Для точного определения типа лучше пользоваться `findmnt`, `df -T` или `lsblk -f`.
- 
-Для виртуальной системы:
- 
-```bash
-findmnt -n -o SOURCE,FSTYPE /proc
-```
- 
-```text
+[student@student-13 ~]$ findmnt -n -o SOURCE,FSTYPE /proc
 proc proc
+[student@student-13 ~]$ findmnt -n -o SOURCE,FSTYPE /sys
+sysfs sysfs
 ```
- 
+
 ## 10. Различия между дисковой и виртуальными файловыми системами
- 
-| Признак | Дисковая (`ext4`, `XFS`) | Виртуальные (`/proc`, `/sys`) |
+
+| Признак | Дисковая (`ext4`) | Виртуальные (`/proc`, `/sys`) |
 |---|---|---|
-| Где хранятся данные | на блочном устройстве (диск, раздел, образ) | в памяти ядра, на диске нет |
+| Где хранятся данные | на блочном устройстве (`/dev/sda1`) | в памяти ядра, на диске нет |
 | Источник содержимого | записывают пользователи и программы | генерирует ядро в момент чтения |
-| Блочное устройство | нужно (`/dev/sda2`) | не нужно (в `/proc/filesystems` помечены `nodev`) |
+| Блочное устройство | нужно (`/dev/sda1`) | не нужно: источник `proc`/`sysfs`, в `/proc/filesystems` помечены `nodev` |
 | Сохранение после перезагрузки | да | нет, содержимое создаётся заново при загрузке |
-| Размер файлов | реальный | обычно показывается `0` байт, но при чтении выдают данные |
+| Размер файлов | реальный | обычно показывается `0`, но при чтении выдают данные |
 | Назначение | долговременное хранение файлов | интерфейс между пользователем и ядром: состояние системы, процессов, устройств |
 | Создание | `mkfs` | не создаются, ядро монтирует их само |
-| Можно ли записывать | свободно, в пределах прав | только в отдельные параметры (`/proc/sys`, часть файлов `/sys`) |
- 
-Пример: файл `/proc/cpuinfo` имеет нулевой размер, но при чтении выводит данные о процессоре.
- 
+
+Пример: файл `/proc/cpuinfo` имеет нулевой размер, но при чтении выдаёт данные о процессоре.
+
 ```bash
-ls -l /proc/cpuinfo
-wc -c /proc/cpuinfo
+[student@student-13 ~]$ ls -l /proc/cpuinfo
+-r--r--r-- 1 root root 0 Nov 15 23:01 /proc/cpuinfo
+[student@student-13 ~]$ wc -c /proc/cpuinfo
+1157 /proc/cpuinfo
 ```
- 
-```text
--r--r--r-- 1 root root 0 Oct 31 12:30 /proc/cpuinfo
-2112 /proc/cpuinfo
-```
- 
-`/proc` ориентирован на процессы и общую информацию о системе, `/sys` — на устройства, драйверы и их настройки. Одно значение хранится в одном файле, а иерархия каталогов отражает структуру объектов ядра.
- 
+
+`/proc` ориентирован на процессы и общую информацию о системе, `/sys` — на устройства, драйверы и их настройки.
+
 ## 11. Возврат системы в исходное состояние
- 
+
 ```bash
-sudo umount /mnt/test 2>/dev/null
-sudo rmdir /mnt/test
-rm /tmp/disk.img
-findmnt /mnt/test
+[student@student-13 ~]$ findmnt /mnt/test; echo "код возврата findmnt: $?"
+код возврата findmnt: 1
+[student@student-13 ~]$ sudo rmdir /mnt/test
+[student@student-13 ~]$ command rm /tmp/disk.img
+[student@student-13 ~]$ ls -ld /mnt/test; ls -l /tmp/disk.img
+ls: cannot access '/mnt/test': No such file or directory
+ls: cannot access '/tmp/disk.img': No such file or directory
 ```
- 
-Последняя команда ничего не выводит, значит тестовая файловая система отмонтирована.
+
+Файловая система отмонтирована, каталог `/mnt/test` и образ `/tmp/disk.img` удалены. Диски `sdb` и `sdc` в работе не использовались.
