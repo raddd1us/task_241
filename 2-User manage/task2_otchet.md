@@ -19,200 +19,221 @@
 - команда восстановления возможности входа;
 - подтверждение, что после восстановления вход снова разрешён.
 
-# Отчёт по практической работе: запрет и восстановление входа пользователя `user1`
+# Отчёт по практической работе: Запрещаем
+
+## 0. Исходное состояние `user1`
+
+```bash
+[student@student-13 ~]$ getent passwd user1
+user1:x:1001:1002::/home/user1:/bin/bash
+[student@student-13 ~]$ sudo passwd -S user1
+Password set, yescrypt encryption.
+[student@student-13 ~]$ sudo chage -l user1
+Last password change                                    : Nov 23, 2026
+Password expires                                        : never
+Password inactive                                       : never
+Account expires                                         : never
+Minimum number of days between password change          : -1
+Maximum number of days between password change          : -1
+Number of days of warning before password expires       : -1
+```
+
+Учётная запись активна: пароль задан, срок действия не ограничен, оболочка `/bin/bash`.
 
 ## 1. Запрет входа
 
 ```bash
-sudo usermod -L user1
+[student@student-13 ~]$ sudo usermod -L user1
 ```
 
-Эквивалент: `sudo passwd -l user1`. Команда добавляет `!` перед хэшем пароля в `/etc/shadow`, и вход по паролю становится невозможен.
-
-Завершение уже открытых сессий пользователя:
-
-```bash
-sudo loginctl terminate-user user1
-```
+Команда `usermod -L` ставит символ `!` перед хэшем пароля, и вход по паролю становится невозможен. Сам хэш сохраняется, поэтому при разблокировке пароль останется прежним.
 
 ## 2. Проверка состояния учётной записи
 
 ```bash
-sudo passwd -S user1
+[student@student-13 ~]$ sudo passwd -S user1
+Locked password, yescrypt encryption.
 ```
 
-```text
-user1 L 10/26/2026 0 99999 7 -1
-```
+Статус `Locked password` подтверждает блокировку.
 
-`L` (locked) означает, что учётная запись заблокирована. `P` означает, что пароль рабочий.
+Проверка хэша пароля. На этом сервере пароли хранятся в отдельных файлах `/etc/tcb/<пользователь>/shadow`, в общем `/etc/shadow` записи `user1` нет:
 
 ```bash
-sudo grep '^user1:' /etc/shadow | cut -c1-20
+[student@student-13 ~]$ sudo awk -F: '$1=="user1"{print $1":"substr($2,1,2)}' /etc/tcb/user1/shadow
+user1:!$
 ```
 
-```text
-user1:!$y$j9T$abc123
-```
+Поле пароля начинается с `!` перед `$`, значит, пароль заблокирован. (Выводятся только первые два символа поля, сам хэш не показывается.)
 
-`!` в начале поля хэша подтверждает блокировку.
-
-Проверка попыткой входа от обычного пользователя (`root` обходит парольную проверку при `su`):
+Проверка попыткой входа от обычного пользователя (`root` обходит проверку пароля, поэтому проверяем от `student`):
 
 ```bash
-raddd1us@ubuntu:~$ su - user1
-```
-
-```text
+[student@student-13 ~]$ su - user1
 Password:
 su: Authentication failure
 ```
 
+Вход отклонён.
+
 ## 3. Другие способы запретить интерактивный вход
 
-**Способ 1. Оболочка `nologin`:**
+### Способ 1. Оболочка `nologin`
 
 ```bash
-sudo usermod -s /usr/sbin/nologin user1
-getent passwd user1
+[student@student-13 ~]$ sudo usermod -s /usr/sbin/nologin user1
+[student@student-13 ~]$ getent passwd user1
+user1:x:1001:1002::/home/user1:/usr/sbin/nologin
+[student@student-13 ~]$ sudo su - user1
+This account is currently not available.
 ```
 
-```text
-user1:x:1001:1001::/home/user1:/usr/sbin/nologin
-```
+Вместо оболочки пользователю выдаётся сообщение, и сессия сразу завершается.
 
-При попытке входа выводится «This account is currently not available».
+### Способ 2. Истечение срока действия учётной записи
 
-**Способ 2. Истечение срока действия учётной записи:**
+Оболочка возвращена в `/bin/bash`, затем срок действия учётки закрыт датой в прошлом:
 
 ```bash
-sudo chage -E 0 user1
-sudo chage -l user1 | grep 'Account expires'
+[student@student-13 ~]$ sudo usermod -s /bin/bash user1
+[student@student-13 ~]$ sudo chage -E 0 user1
+[student@student-13 ~]$ sudo chage -l user1 | grep 'Account expires'
+Account expires                                         : Jan 01, 1970
 ```
 
-```text
-Account expires						: Oct 26, 2026
-```
-
-Блокирует вход любым способом, включая SSH по ключу.
-
-**Способ 3. Запрет в SSH** (`/etc/ssh/sshd_config`):
+Проверка через `sudo su - user1` показывает, что `root` обходит это ограничение (вход выполняется, ошибка помечена как `Ignored`):
 
 ```bash
-echo 'DenyUsers user1' | sudo tee -a /etc/ssh/sshd_config
-sudo systemctl reload ssh
+[student@student-13 ~]$ sudo su - user1
+Your account has expired; please contact your system administrator.
+Account management:- User account has expired
+(Ignored)
+[user1@student-13 ~]$ exit
+logout
 ```
 
-**Способ 4. PAM `pam_access`** (`/etc/security/access.conf`):
-
-```text
-- : user1 : ALL
-```
-
-Требуется строка `account required pam_access.so` в PAM-конфигурации нужного сервиса.
-
-**Способ 5. Файл `/etc/nologin`:**
+Чтобы проверить именно запрет по сроку, пароль временно разблокирован (иначе вход отклонился бы на проверке пароля), и выполнена попытка входа от обычного пользователя:
 
 ```bash
-sudo touch /etc/nologin
+[student@student-13 ~]$ sudo usermod -U user1
+[student@student-13 ~]$ sudo passwd -S user1
+Password set, yescrypt encryption.
+[student@student-13 ~]$ su - user1
+Password:
+Your account has expired; please contact your system administrator.
+su: User account has expired
 ```
 
-Запрещает вход всем, кроме root. Это метод для технических работ, а не для одного пользователя.
+Даже с верным паролем вход запрещён.
 
-**Важно:** `usermod -L` блокирует только пароль. Вход по SSH-ключу продолжит работать, поэтому для полного запрета его сочетают с `chage -E 0` или `nologin`.
+### Другие известные способы (описание, на сервере не выполнялись)
 
-## 4. Можно ли создать двух пользователей с одинаковым username?
+- **`DenyUsers user1` в `/etc/ssh/sshd_config`** запрещает вход пользователя только по SSH.
+- **Модуль PAM `pam_access`** (правила в `/etc/security/access.conf`, например `- : user1 : ALL`) запрещает вход в зависимости от настроек PAM.
+- **Файл `/etc/nologin`** запрещает вход всем, кроме `root`, на время технических работ.
 
-**Нет.** Имя пользователя должно быть уникальным:
+Блокировка пароля (`usermod -L`) не запрещает вход по SSH-ключу, поэтому для полного запрета её сочетают с `nologin` или `chage -E 0`.
+
+## 4. Можно ли создать двух пользователей с одинаковым `username`?
+
+**Нет.**
 
 ```bash
-sudo useradd user1
-```
-
-```text
+[student@student-13 ~]$ sudo useradd user1
 useradd: user 'user1' already exists
+[student@student-13 ~]$ echo "код возврата: $?"
+код возврата: 9
+[student@student-13 ~]$ getent passwd | grep -c '^user1:'
+1
 ```
 
-Код возврата: 9. Если вручную добавить дубликат в `/etc/passwd` (через `vipw`), конфигурация станет некорректной: `getpwnam()` вернёт только первую запись, вторая окажется недостижимой.
+Повторное создание отклонено (код 9), запись `user1` остаётся одна.
 
 ## 5. Можно ли создать двух пользователей с одинаковым UID?
 
-**Да, но только с ключом `-o` (non-unique).** Без него:
+**Да, но только с ключом `-o` (non-unique).** Без него система отказывает:
 
 ```bash
-sudo useradd -m -u 1001 user3
-```
-
-```text
+[student@student-13 ~]$ sudo useradd -m -u 1001 user3; echo "код возврата: $?"
 useradd: UID 1001 is not unique
+код возврата: 4
 ```
 
-С ключом `-o`:
+С ключом `-o` пользователь создаётся:
 
 ```bash
-sudo useradd -m -o -u 1001 -s /bin/sh user3
-getent passwd | awk -F: '$3==1001'
+[student@student-13 ~]$ sudo useradd -m -o -u 1001 -s /bin/bash user3; echo "код возврата: $?"
+код возврата: 0
+[student@student-13 ~]$ getent passwd | awk -F: '$3==1001'
+user1:x:1001:1002::/home/user1:/bin/bash
+user3:x:1001:1005::/home/user3:/bin/bash
 ```
 
-```text
-user1:x:1001:1001::/home/user1:/bin/bash
-user3:x:1001:1002::/home/user3:/bin/sh
-```
-
-**Что увидит система.** Ядро работает только с числовым UID, а имена нужны лишь пользовательским утилитам. Поэтому:
-
-- `user3` получает те же права, что и `user1`, включая полный доступ к его файлам;
-- `ls -l` и `stat` показывают владельца по первому совпадению в `/etc/passwd`, то есть `user1`, даже для файлов, созданных от `user3`;
-- в журналах, аудите и квотах пользователи неразличимы;
-- блокировка `user1` не блокирует `user3`, так как это отдельная запись со своим паролем.
-
-Это почти всегда ошибка конфигурации или дыра в безопасности. Тестового пользователя удаляем:
+Что видит система:
 
 ```bash
-sudo userdel -r user3
+[student@student-13 ~]$ id user1; id user3
+uid=1001(user1) gid=1002(user1) groups=1002(user1),10(wheel),1004(labusers)
+uid=1001(user1) gid=1005(user3) groups=1002(user1)
+[student@student-13 ~]$ sudo -u user3 touch /home/user3/test_uid.txt
+[student@student-13 ~]$ sudo ls -l /home/user3/test_uid.txt
+-rw-r--r-- 1 user1 user3 0 Nov 23 11:53 /home/user3/test_uid.txt
+[student@student-13 ~]$ sudo ls -ln /home/user3/test_uid.txt
+-rw-r--r-- 1 1001 1005 0 Nov 23 11:53 /home/user3/test_uid.txt
+[student@student-13 ~]$ sudo stat -c 'owner=%U uid=%u group=%G gid=%g' /home/user3/test_uid.txt
+owner=user1 uid=1001 group=user3 gid=1005
+[student@student-13 ~]$ ls -ld /home/user3
+drwx------ 8 user1 user3 4096 Nov 23 11:53 /home/user3
+```
+
+**Последствия.** Ядро хранит только числовой UID, а имя подставляется по первой найденной записи в `/etc/passwd`:
+
+- `id user3` показывает `uid=1001(user1)`;
+- файл, созданный от `user3`, отображается как принадлежащий `user1` (по числам: UID 1001, GID 1005);
+- домашний каталог `user3` тоже числится за `user1`;
+- у обоих пользователей одинаковые права на файлы, различить их по владельцу и в журналах нельзя.
+
+Это ошибка конфигурации или дыра в безопасности. Тестовый пользователь удалён:
+
+```bash
+[student@student-13 ~]$ sudo userdel -r user3; echo "код возврата: $?"
+код возврата: 0
+[student@student-13 ~]$ getent passwd | awk -F: '$3==1001'
+user1:x:1001:1002::/home/user1:/bin/bash
+[student@student-13 ~]$ getent passwd user3; echo "код возврата getent: $?"
+код возврата getent: 2
+[student@student-13 ~]$ ls -ld /home/user1
+drwx------ 8 user1 user1 4096 Nov 23 11:50 /home/user1
 ```
 
 ## 6. Восстановление возможности входа
 
-```bash
-sudo usermod -U user1
-```
-
-Эквивалент: `sudo passwd -u user1`. Если применялись дополнительные меры, откатываем и их:
+Применённые команды восстановления:
 
 ```bash
-sudo usermod -s /bin/bash user1
-sudo chage -E -1 user1
+sudo usermod -U user1          # снять блокировку пароля (выполнена в разделе 3)
+sudo usermod -s /bin/bash user1  # вернуть оболочку (выполнена в разделе 3)
+sudo chage -E -1 user1         # снять ограничение срока действия учётки
 ```
 
-## 7. Подтверждение, что вход снова разрешён
+Подтверждение, что вход снова разрешён:
 
 ```bash
-sudo passwd -S user1
-```
-
-```text
-user1 P 10/26/2026 0 99999 7 -1
-```
-
-```bash
-sudo grep '^user1:' /etc/shadow | cut -c1-20
-```
-
-```text
-user1:$y$j9T$abc123
-```
-
-Символа `!` перед хэшем больше нет.
-
-```bash
-raddd1us@ubuntu:~$ su - user1
-```
-
-```text
+[student@student-13 ~]$ sudo chage -E -1 user1
+[student@student-13 ~]$ sudo chage -l user1 | grep 'Account expires'
+Account expires                                         : never
+[student@student-13 ~]$ sudo passwd -S user1
+Password set, yescrypt encryption.
+[student@student-13 ~]$ sudo awk -F: '$1=="user1"{print $1":"substr($2,1,2)}' /etc/tcb/user1/shadow
+user1:$y
+[student@student-13 ~]$ getent passwd user1
+user1:x:1001:1002::/home/user1:/bin/bash
+[student@student-13 ~]$ su - user1
 Password:
-user1@ubuntu:~$ whoami
+[user1@student-13 ~]$ whoami
 user1
+[user1@student-13 ~]$ exit
+logout
 ```
 
-Вход выполняется, ограничение снято.
+Блокировка снята (`Password set`, перед хэшем нет `!`), срок учётки снова `never`, оболочка `/bin/bash`, а вход по паролю от обычного пользователя выполняется. Состояние `user1` совпадает с исходным.
