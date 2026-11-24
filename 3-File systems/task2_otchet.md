@@ -31,6 +31,7 @@
 
 # Отчёт по практической работе: Структура каталогов
 
+
 ## 1. Структура каталогов в Linux и список объектов в корне
 
 В Linux используется **единое иерархическое дерево каталогов**. У него один корень `/`, а все остальные файлы, каталоги, устройства и подключённые диски располагаются внутри него. Отдельных «дисков» вроде `C:` и `D:` нет: дополнительные разделы и носители монтируются в каталоги дерева (например, в `/mnt` или `/media`). Расположение основных каталогов описывает стандарт **FHS** (Filesystem Hierarchy Standard).
@@ -38,85 +39,62 @@
 Список объектов в корне системы:
 
 ```bash
-raddd1us@ubuntu:~$ ls /
-```
-
-```text
-bin                boot  dev  home  lib64  lost+found  mnt  proc  run   snap  sys  usr
-bin.usr-is-merged  cdrom etc  lib   lib.usr-is-merged  media  opt  root  sbin  srv   tmp  var
+[student@student-13 ~]$ ls /
+bin   dev  home  lib64   lost+found  mnt  proc  run   selinux  sys  usr
+boot  etc  lib   libx32  media       opt  root  sbin  srv      tmp  var
 ```
 
 Подробный вывод с типами и правами:
 
 ```bash
-raddd1us@ubuntu:~$ ls -l /
+[student@student-13 ~]$ ls -l /
+total 60
+lrwxrwxrwx   1 root root     7 Apr  6  2024 bin -> usr/bin
+drwx------   3 root root  4096 Oct  7  2025 boot
+drwxr-xr-x  18 root root  3820 Nov 15 22:56 dev
+drwxr-xr-x  70 root root  4096 Nov 23 11:55 etc
+drwxr-xr-x   5 root root  4096 Nov 23 11:55 home
+lrwxrwxrwx   1 root root     7 Apr  6  2024 lib -> usr/lib
+lrwxrwxrwx   1 root root     9 Apr  6  2024 lib64 -> usr/lib64
+lrwxrwxrwx   1 root root    10 Apr  6  2024 libx32 -> usr/libx32
+drwx------   2 root root 16384 Oct  7  2025 lost+found
+drwxr-xr-x   2 root root  4096 Apr  6  2024 media
+drwxr-xr-x   2 root root  4096 Nov 23 17:45 mnt
+drwxr-xr-x   2 root root  4096 Apr  6  2024 opt
+dr-xr-xr-x 167 root root     0 Nov 15 22:56 proc
+drwxr-xr-x   8 root root  4096 Nov 16 13:37 root
+drwxr-xr-x  19 root root   500 Nov 23 17:40 run
+lrwxrwxrwx   1 root root     8 Apr  6  2024 sbin -> usr/sbin
+dr-xr-xr-x   2 root root  4096 Apr  6  2024 selinux
+drwxr-xr-x   2 root root  4096 Apr  6  2024 srv
+dr-xr-xr-x  13 root root     0 Nov 22 16:23 sys
+drwxrwxrwt   8 root root   160 Nov 23 17:45 tmp
+drwxr-xr-x  14 root root  4096 Oct  7  2025 usr
+drwxr-xr-x  16 root root  4096 Oct  7  2025 var
 ```
 
-```text
-total 76
-lrwxrwxrwx   1 root root     7 Apr 22  2024 bin -> usr/bin
-drwxr-xr-x   2 root root  4096 Feb 26  2024 bin.usr-is-merged
-drwxr-xr-x   4 root root  4096 Nov  5 11:20 boot
-drwxr-xr-x  19 root root  4600 Nov  5 11:18 dev
-drwxr-xr-x 120 root root 12288 Nov  5 11:20 etc
-drwxr-xr-x   3 root root  4096 Oct 20 10:02 home
-lrwxrwxrwx   1 root root     7 Apr 22  2024 lib -> usr/lib
-lrwxrwxrwx   1 root root     9 Apr 22  2024 lib64 -> usr/lib64
-drwx------   2 root root 16384 Oct 20 09:55 lost+found
-drwxr-xr-x   2 root root  4096 Apr 22  2024 media
-drwxr-xr-x   2 root root  4096 Apr 22  2024 mnt
-drwxr-xr-x   2 root root  4096 Apr 22  2024 opt
-dr-xr-xr-x 310 root root     0 Nov  5 11:18 proc
-drwx------   5 root root  4096 Nov  5 11:25 root
-drwxr-xr-x  33 root root   980 Nov  5 11:30 run
-lrwxrwxrwx   1 root root     8 Apr 22  2024 sbin -> usr/sbin
-drwxr-xr-x   2 root root  4096 Apr 22  2024 srv
-dr-xr-xr-x  13 root root     0 Nov  5 11:18 sys
-drwxrwxrwt  12 root root  4096 Nov  5 11:35 tmp
-drwxr-xr-x  12 root root  4096 Apr 22  2024 usr
-drwxr-xr-x  14 root root  4096 Oct 20 09:58 var
-```
-
-Из вывода видно, что `/bin`, `/sbin`, `/lib` и `/lib64` в этой системе являются символическими ссылками (первый символ в правах — `l`), а `/proc` и `/sys` имеют размер `0` — это виртуальные файловые системы.
+Из вывода видно, что `/bin`, `/sbin`, `/lib`, `/lib64` и `/libx32` в этой системе являются символическими ссылками на каталоги внутри `/usr` (первый символ в правах — `l`, после имени стоит `->`). У `/proc` и `/sys` размер `0` — это виртуальные файловые системы.
 
 ## 2. Где хранятся домашние каталоги обычных пользователей
 
 Домашние каталоги обычных пользователей хранятся в **`/home`**, по одному каталогу на пользователя: `/home/<имя_пользователя>`.
 
 ```bash
-raddd1us@ubuntu:~$ ls /home
-```
-
-```text
-raddd1us  user1
-```
-
-```bash
-raddd1us@ubuntu:~$ echo $HOME
-```
-
-```text
-/home/raddd1us
+[student@student-13 ~]$ ls /home
+student  user1  user2
+[student@student-13 ~]$ echo $HOME
+/home/student
 ```
 
 ## 3. Домашний каталог суперпользователя
 
-Домашний каталог `root` находится в **`/root`**, а не в `/home`. Это сделано для того, чтобы администратор мог работать, даже если раздел `/home` не смонтирован. Доступ к `/root` закрыт для остальных пользователей (права `drwx------`).
+Домашний каталог `root` находится в **`/root`**, а не в `/home`. Это сделано для того, чтобы администратор мог работать, даже если раздел `/home` не смонтирован.
 
 ```bash
-raddd1us@ubuntu:~$ getent passwd root
-```
-
-```text
-root:x:0:0:root:/root:/bin/bash
-```
-
-```bash
-raddd1us@ubuntu:~$ ls -ld /root
-```
-
-```text
-drwx------ 5 root root 4096 Nov  5 11:25 /root
+[student@student-13 ~]$ getent passwd root
+root:x:0:0:System Administrator:/root:/bin/bash
+[student@student-13 ~]$ ls -ld /root
+drwxr-xr-x 8 root root 4096 Nov 16 13:37 /root
 ```
 
 ## 4. Где хранятся основные системные конфигурационные файлы
@@ -124,105 +102,74 @@ drwx------ 5 root root 4096 Nov  5 11:25 /root
 Основные системные конфигурационные файлы хранятся в каталоге **`/etc`**. Это в основном текстовые файлы, которые можно редактировать вручную с правами администратора.
 
 ```bash
-raddd1us@ubuntu:~$ ls -d /etc/passwd /etc/group /etc/fstab /etc/hostname /etc/ssh
+[student@student-13 ~]$ ls -d /etc/passwd /etc/group /etc/fstab /etc/hostname /etc/ssh
+ls: cannot access '/etc/ssh': No such file or directory
+/etc/fstab  /etc/group  /etc/hostname  /etc/passwd
 ```
 
-```text
-/etc/fstab  /etc/group  /etc/hostname  /etc/passwd  /etc/ssh
+Каталога `/etc/ssh` в этой системе нет: конфигурация SSH находится в `/etc/openssh`.
+
+```bash
+[student@student-13 ~]$ ls -d /etc/openssh
+/etc/openssh
+[student@student-13 ~]$ ls -l /etc/shadow
+-r-------- 1 root root 535 Oct  7  2025 /etc/shadow
 ```
 
-Примеры: `/etc/passwd` и `/etc/group` — учётные записи и группы, `/etc/shadow` — хеши паролей, `/etc/fstab` — таблица монтирования, `/etc/ssh/` — настройки SSH.
+Примеры: `/etc/passwd` и `/etc/group` — учётные записи и группы, `/etc/shadow` — хеши паролей (читать может только root), `/etc/fstab` — таблица монтирования, `/etc/openssh/` — настройки SSH.
 
 ## 5. Назначение каталогов
 
 | Каталог | Назначение |
 |---|---|
-| `/bin` | Основные исполняемые файлы команд, нужные всем пользователям и для работы системы (`ls`, `cp`, `cat`, `bash`). В современных дистрибутивах — символическая ссылка на `/usr/bin` |
-| `/sbin` | Системные программы для администрирования, обычно запускаются от root (`fdisk`, `ip`, `reboot`). В современных дистрибутивах — ссылка на `/usr/sbin` |
+| `/bin` | Основные исполняемые файлы команд, нужные всем пользователям и для работы системы (`ls`, `cp`, `cat`). В этой системе — символическая ссылка на `/usr/bin` |
+| `/sbin` | Системные программы для администрирования, обычно запускаются от root. В этой системе — символическая ссылка на `/usr/sbin` |
 | `/usr/bin` | Основная масса исполняемых файлов пользовательских программ и команд, установленных из пакетов |
-| `/usr/sbin` | Административные программы, не нужные при обычной работе пользователя (`usermod`, `useradd`, `sshd`) |
+| `/usr/sbin` | Административные программы, не нужные при обычной работе пользователя |
 | `/etc` | Системные конфигурационные файлы (учётные записи, сеть, службы, монтирование) |
-| `/var` | Изменяемые данные: журналы (`/var/log`), кэш, очереди почты и печати, базы данных, данные пакетных менеджеров |
-| `/tmp` | Временные файлы всех пользователей и программ; доступен на запись всем, обычно очищается при перезагрузке |
+| `/var` | Изменяемые данные: журналы (`/var/log`), кэш, очереди, базы данных, данные пакетных менеджеров |
+| `/tmp` | Временные файлы всех пользователей и программ; доступен на запись всем (права `drwxrwxrwt`) |
 | `/home` | Домашние каталоги обычных пользователей с их личными файлами и настройками |
 | `/root` | Домашний каталог суперпользователя `root` |
-| `/proc` | Виртуальная файловая система (procfs): информация о процессах и состоянии ядра (`/proc/cpuinfo`, `/proc/meminfo`, `/proc/<PID>`) |
-| `/sys` | Виртуальная файловая система (sysfs): информация об устройствах, драйверах и подсистемах ядра; через неё можно читать и менять параметры оборудования |
+| `/proc` | Виртуальная файловая система (procfs): информация о процессах и состоянии ядра (`/proc/cpuinfo`, `/proc/<PID>`) |
+| `/sys` | Виртуальная файловая система (sysfs): информация об устройствах, драйверах и подсистемах ядра |
 
 ## 6. `/bin` и `/sbin`: каталоги или символические ссылки
 
 ```bash
-raddd1us@ubuntu:~$ ls -ld /bin /sbin /usr/bin /usr/sbin
-```
-
-```text
-lrwxrwxrwx  1 root root     7 Apr 22  2024 /bin -> usr/bin
-lrwxrwxrwx  1 root root     8 Apr 22  2024 /sbin -> usr/sbin
-drwxr-xr-x  2 root root 69632 Nov  5 11:20 /usr/bin
-drwxr-xr-x  2 root root 28672 Nov  5 11:20 /usr/sbin
-```
-
-Дополнительная проверка:
-
-```bash
-raddd1us@ubuntu:~$ readlink -f /bin
-raddd1us@ubuntu:~$ readlink -f /sbin
-raddd1us@ubuntu:~$ file /bin /sbin
-```
-
-```text
+[student@student-13 ~]$ ls -ld /bin /sbin /usr/bin /usr/sbin
+lrwxrwxrwx 1 root root     7 Apr  6  2024 /bin -> usr/bin
+lrwxrwxrwx 1 root root     8 Apr  6  2024 /sbin -> usr/sbin
+drwxr-xr-x 2 root root 20480 Oct  7  2025 /usr/bin
+drwxr-xr-x 2 root root 12288 Oct  7  2025 /usr/sbin
+[student@student-13 ~]$ readlink -f /bin
 /usr/bin
+[student@student-13 ~]$ readlink -f /sbin
 /usr/sbin
-/bin:  symbolic link to usr/bin
-/sbin: symbolic link to usr/sbin
 ```
 
-**Вывод:** в моей системе `/bin` и `/sbin` — это **символические ссылки** на `/usr/bin` и `/usr/sbin` соответственно (первый символ в правах — `l`, после имени стоит `->`). Реальными каталогами являются `/usr/bin` и `/usr/sbin` (первый символ — `d`). Такая схема называется *merged-usr*: все исполняемые файлы физически лежат в `/usr`, а старые пути `/bin` и `/sbin` сохранены для совместимости.
+**Вывод:** в моей системе `/bin` и `/sbin` — это **символические ссылки** на `/usr/bin` и `/usr/sbin` соответственно (первый символ в правах — `l`, после имени стоит `->`). Реальными каталогами являются `/usr/bin` и `/usr/sbin` (первый символ — `d`). Все исполняемые файлы физически лежат в `/usr`, а старые пути `/bin` и `/sbin` сохранены для совместимости.
 
 ## 7. Поиск исполняемого файла команды
 
-Выбрана команда `usermod`, которая использовалась ранее при работе с пользователями.
+Выбрана команда `cat`.
 
 ```bash
-raddd1us@ubuntu:~$ which usermod
+[student@student-13 ~]$ which cat
+/usr/bin/cat
+[student@student-13 ~]$ type -a cat
+cat is /usr/bin/cat
+cat is /bin/cat
+[student@student-13 ~]$ whereis cat
+cat: /usr/bin/cat /usr/share/man/man1/cat.1.xz
+[student@student-13 ~]$ readlink -f /bin/cat
+/usr/bin/cat
+[student@student-13 ~]$ rpm -qf $(which cat)
+coreutils-9.4.0.75.7f2c97-alt1.x86_64
+coreutils-9.4.0.75.7f2c97-alt1.x86_64
 ```
 
-```text
-/usr/sbin/usermod
-```
-
-```bash
-raddd1us@ubuntu:~$ type -a usermod
-```
-
-```text
-usermod is /usr/sbin/usermod
-usermod is /sbin/usermod
-```
-
-```bash
-raddd1us@ubuntu:~$ whereis usermod
-```
-
-```text
-usermod: /usr/sbin/usermod /usr/share/man/man8/usermod.8.gz
-```
-
-Проверка того, что физический файл один, а путь `/sbin/usermod` ведёт к нему через ссылку:
-
-```bash
-raddd1us@ubuntu:~$ ls -l /usr/sbin/usermod
-raddd1us@ubuntu:~$ readlink -f /sbin/usermod
-raddd1us@ubuntu:~$ dpkg -S /usr/sbin/usermod
-```
-
-```text
--rwxr-xr-x 1 root root 77280 Apr  9  2024 /usr/sbin/usermod
-/usr/sbin/usermod
-passwd: /usr/sbin/usermod
-```
-
-**Вывод:** физически исполняемый файл `usermod` расположен в **`/usr/sbin/usermod`** и принадлежит пакету `passwd`. Путь `/sbin/usermod` работает только потому, что `/sbin` — символическая ссылка на `/usr/sbin`.
+**Вывод:** физически исполняемый файл `cat` расположен в **`/usr/bin/cat`** и принадлежит пакету `coreutils`. Путь `/bin/cat` работает только потому, что `/bin` — символическая ссылка на `/usr/bin`. Вывод `rpm -qf` содержит одну и ту же строку дважды — это один и тот же пакет.
 
 ## 8. Различия между обычным каталогом, символической ссылкой и виртуальной файловой системой
 
@@ -233,28 +180,32 @@ passwd: /usr/sbin/usermod
 | Тип в `ls -l` | `d` | `l` (`/bin -> usr/bin`) | Обычно каталог `d` (`/proc`, `/sys`), но смонтирован отдельным типом ФС |
 | Размер | Занимает место на диске (минимум блок) | Равен длине пути (`/bin` → 7 байт) | `0` |
 | Если цель удалить | Данные теряются | Ссылка становится «битой» | Содержимое отражает текущее состояние ядра и меняется само |
-| Примеры | `/usr/bin`, `/etc`, `/home` | `/bin`, `/sbin`, `/lib` | `/proc` (procfs), `/sys` (sysfs), `/dev` (devtmpfs) |
+| Примеры | `/usr/bin`, `/etc`, `/home` | `/bin`, `/sbin`, `/lib` | `/proc` (procfs), `/sys` (sysfs) |
 
 Проверка того, что `/proc` и `/sys` являются виртуальными файловыми системами:
 
 ```bash
-raddd1us@ubuntu:~$ findmnt /proc
-raddd1us@ubuntu:~$ findmnt /sys
+[student@student-13 ~]$ findmnt /proc
+TARGET
+      SOURCE
+           FSTYPE OPTIONS
+/proc proc proc   rw,nosuid,noexec,relatime,gid=19
+[student@student-13 ~]$ findmnt /sys
+TARGET
+     SOURCE
+           FSTYPE OPTIONS
+/sys sysfs sysfs  rw,nosuid,nodev,noexec,relatime
 ```
 
-```text
-TARGET SOURCE FSTYPE OPTIONS
-/proc  proc   proc   rw,nosuid,nodev,noexec,relatime
-TARGET SOURCE FSTYPE OPTIONS
-/sys   sysfs  sysfs  rw,nosuid,nodev,noexec,relatime
-```
+Типы файловых систем `proc` и `sysfs` показывают, что это не каталоги на диске, а виртуальные файловые системы ядра.
 
 ```bash
-raddd1us@ubuntu:~$ ls -l /proc/cpuinfo
-```
-
-```text
--r--r--r-- 1 root root 0 Nov  5 11:40 /proc/cpuinfo
+[student@student-13 ~]$ ls -l /proc/cpuinfo
+-r--r--r-- 1 root root 0 Nov 15 23:01 /proc/cpuinfo
+[student@student-13 ~]$ head -n 3 /proc/cpuinfo
+processor       : 0
+vendor_id       : GenuineIntel
+cpu family      : 6
 ```
 
 Файл `/proc/cpuinfo` имеет размер `0`, но при чтении выдаёт информацию о процессоре — она формируется ядром в момент обращения.
