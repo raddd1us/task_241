@@ -23,4 +23,6 @@
 ## Формат отчётов
 
 Файлы называются `*_otchet.md`. В каждом отчёте есть условие задания, критерий приёмки и нумерованные разделы с командами и их реальным выводом.
-<img width="735" height="591" alt="🪱 тг_ Перфоратор Кабачки" src="https://github.com/user-attachments/assets/01d11d46-89ea-4f10-9eca-b57f23f76484" />
+
+<p align="center">
+</p<img width="735" height="591" alt="🪱 тг_ Перфоратор Кабачки" src="https://github.com/user-attachments/assets/01d11d46-89ea-4f10-9eca-b57f23f76484" />
