@@ -24,5 +24,5 @@
 
 Файлы называются `*_otchet.md`. В каждом отчёте есть условие задания, критерий приёмки и нумерованные разделы с командами и их реальным выводом.
 
-<p align="center">
-</p<img width="735" height="591" alt="🪱 тг_ Перфоратор Кабачки" src="https://github.com/user-attachments/assets/01d11d46-89ea-4f10-9eca-b57f23f76484" />
+<img width="735" height="591" alt="🪱 тг_ Перфоратор Кабачки" src="https://github.com/user-attachments/assets/ad89cd89-df65-4a02-9c64-b0e0cc0b7d2d" />
+
